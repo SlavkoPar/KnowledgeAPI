@@ -13,14 +13,11 @@ namespace Knowledge.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class FamilyController : ControllerBase
+    public class CategoryController : ControllerBase
     {
         private readonly IConfiguration Configuration;
 
-        private readonly string DbName = "Families";
-        private readonly string DbContainerName = "Items";
-
-        public FamilyController(IConfiguration configuration)
+        public CategoryController(IConfiguration configuration)
         {
             Configuration = configuration;
         }
@@ -29,47 +26,57 @@ namespace Knowledge.Controllers
 
         // GET api/<FamilyController>
         [HttpGet]
-        public List<CategoryData> Get()
+        public async Task<IActionResult> Get()
         {
-            var db = new DB(Configuration);
-            var container = db.getContainer();
-            using (StreamReader r = new StreamReader("InitialData/categories-questions.json"))
+            List<CategoryData> list = new List<CategoryData>();
+            try
             {
-                string json = r.ReadToEnd();
-                CategoriesData categoriesData = JsonConvert.DeserializeObject<CategoriesData>(json);
-                List<CategoryData> list = new List<CategoryData>();
-                foreach (var categoryData in categoriesData!.Categories)
+                var db = new DB(Configuration);
+                var container = await db.getContainer();
+                using (StreamReader r = new StreamReader("InitialData/categories-questions.json"))
                 {
-                    list.Add(categoryData);
-                    //await addCategory(categoryData)
+                    string json = r.ReadToEnd();
+                    CategoriesData categoriesData = JsonConvert.DeserializeObject<CategoriesData>(json);
+                    foreach (var categoryData in categoriesData!.Categories)
+                    {
+                        categoryData.parentCategory = null;
+                        list.Add(categoryData);
+                        await db.AddCategory(categoryData);
+                    }
+
+                    //IEnumerable<SubCategoryDto> rows =
+                    //      categorys
+                    //         .Select(e => new SubCategoryDto
+                    //         {
+                    //             SubCategoryCode = e.SubCategoryCode,
+                    //             SubCategoryName = e.SubCategoryName
+                    //         })
+                    //         .ToList();
+
+                    //var rowsAtPage = rows
+                    //                      .Skip((query.Page - 1) * query.PageSize)
+                    //                      .Take(query.PageSize)
+                    //                      .AsEnumerable()
+                    //                      //.Select(item => new UserDtoSmall(item))
+                    //                      .ToList();
                 }
 
-                //IEnumerable<SubCategoryDto> rows =
-                //      categorys
-                //         .Select(e => new SubCategoryDto
-                //         {
-                //             SubCategoryCode = e.SubCategoryCode,
-                //             SubCategoryName = e.SubCategoryName
-                //         })
-                //         .ToList();
-
-                //var rowsAtPage = rows
-                //                      .Skip((query.Page - 1) * query.PageSize)
-                //                      .Take(query.PageSize)
-                //                      .AsEnumerable()
-                //                      //.Select(item => new UserDtoSmall(item))
-                //                      .ToList();
-                return list;
+                return Ok(list);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
             }
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetFamilies(int id)
+        public async Task<IActionResult> GetCategories(int id)
         {
             try
             {
                 var db = new DB(Configuration);
-                Container container = await db.getContainer();
+                var container = await db.getContainer();
+
                 var sqlQuery = "SELECT VALUE { id: c.id, LastName: c.LastName, Address: c.Address } FROM c";
                 QueryDefinition queryDefinition = new QueryDefinition(sqlQuery);
                 FeedIterator<Family> queryResultSetIterator = container.GetItemQueryIterator<Model.Family>(queryDefinition);

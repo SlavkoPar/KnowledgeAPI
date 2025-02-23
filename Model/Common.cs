@@ -6,9 +6,14 @@ namespace Knowledge.Model
 
     public class WhoWhen
     {
-        DateTime date { get; set; }
-        string nickName { get; set; }
+        public WhoWhen(string nickName) { 
+            this.dateTime = DateTime.Now;
+            this.nickName = nickName;
+        }
+        public DateTime dateTime { get; set; }
+        public string nickName { get; set; }
     }
+
     public class Record
     {
         public WhoWhen created { get; set; }
