@@ -15,7 +15,7 @@ namespace Knowledge.Model
         public string title { get; set; }
         public int kind { get; set; }
         public string? parentCategory { get; set; }
-        public IList<string> words { get; set; }
+        // public IList<string> words { get; set; }
         public int level { get; set; }
         public IList<string>? variations { get; set; }
         public int numOfQuestions { get; set; }
@@ -26,7 +26,7 @@ namespace Knowledge.Model
 
         public static Db? Db { get; set; } = null;
 
-        private readonly string containerId = "Items";
+        private readonly string containerId = "Categories";
         public static Container? container { get; set; } = null;
 
         public static string? partitionKey { get; set; } = null;
@@ -45,13 +45,13 @@ namespace Knowledge.Model
             this.Id = categoryData.id;
             this.PartitionKey = categoryData.PartitionKey!;
             this.title = categoryData.title;
-            this.words =
-                categoryData.title
-                    .ToLower()
-                    .Replace("?", "")
-                    .Split(' ', StringSplitOptions.RemoveEmptyEntries|StringSplitOptions.TrimEntries)
-                    .Where(w => w.Length > 1)
-                    .ToList();
+            //this.words =
+            //    categoryData.title
+            //        .ToLower()
+            //        .Replace("?", "")
+            //        .Split(' ', StringSplitOptions.RemoveEmptyEntries|StringSplitOptions.TrimEntries)
+            //        .Where(w => w.Length > 1)
+            //        .ToList();
             this.kind = categoryData.kind;
             this.parentCategory = categoryData.parentCategory;
             this.level = 1;

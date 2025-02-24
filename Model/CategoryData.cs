@@ -3,14 +3,6 @@
 
 namespace Knowledge.Model
 {
-    public class QuestionData
-    {
-        public string title { get; set; }
-        public IList<int>? assignedAnswers { get; set; }
-        //public int? source { get; set; }
-        //public int? status { get; set; }
-    }
-
     public class CategoryData
     {
         public string? parentCategory { get; set; }
