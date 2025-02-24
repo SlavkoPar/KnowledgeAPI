@@ -3,9 +3,7 @@ using Microsoft.Azure.Cosmos;
 using Knowledge.Model;
 using Microsoft.Extensions.Configuration;
 using System.Configuration;
-using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
-using Knowledge.Operations;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -16,6 +14,7 @@ namespace Knowledge.Controllers
     public class CategoryController : ControllerBase
     {
         private readonly IConfiguration Configuration;
+        private readonly string containerId = "Items";
 
         public CategoryController(IConfiguration configuration)
         {
@@ -26,40 +25,44 @@ namespace Knowledge.Controllers
 
         // GET api/<FamilyController>
         [HttpGet]
-        public async Task<IActionResult> Get()
+        public async Task<IActionResult> GetCategories(string parentCategory)
         {
-            List<CategoryData> list = new List<CategoryData>();
             try
             {
-                var db = new DB(Configuration);
-                var container = await db.getContainer();
-                using (StreamReader r = new StreamReader("InitialData/categories-questions.json"))
+                var Db = new Db(this.Configuration);
+                var container = await Db.GetContainer(containerId);
+
+                // OR c.parentCategory = ''
+                var sqlQuery = $"SELECT * FROM c WHERE " + (
+                    (parentCategory == "null")
+                        ? "IS_NULL(c.parentCategory)" 
+                        : $"c.parentCategory = '{parentCategory}'"
+                );
+                QueryDefinition queryDefinition = new QueryDefinition(sqlQuery);
+                FeedIterator<Category> queryResultSetIterator = container.GetItemQueryIterator<Model.Category>(queryDefinition);
+                List<CategoryDto> items = new List<CategoryDto>();
+                while (queryResultSetIterator.HasMoreResults)
                 {
-                    string json = r.ReadToEnd();
-                    CategoriesData categoriesData = JsonConvert.DeserializeObject<CategoriesData>(json);
-                    foreach (var categoryData in categoriesData!.Categories)
+                    FeedResponse<Category> currentResultSet = await queryResultSetIterator.ReadNextAsync();
+                    foreach (Category category in currentResultSet)
                     {
-                        categoryData.parentCategory = null;
-                        list.Add(categoryData);
-                        await db.AddCategory(categoryData);
+                        items.Add(new CategoryDto(category));
                     }
-
-                    //IEnumerable<SubCategoryDto> rows =
-                    //      categorys
-                    //         .Select(e => new SubCategoryDto
-                    //         {
-                    //             SubCategoryCode = e.SubCategoryCode,
-                    //             SubCategoryName = e.SubCategoryName
-                    //         })
-                    //         .ToList();
-
-                    //var rowsAtPage = rows
-                    //                      .Skip((query.Page - 1) * query.PageSize)
-                    //                      .Take(query.PageSize)
-                    //                      .AsEnumerable()
-                    //                      //.Select(item => new UserDtoSmall(item))
-                    //                      .ToList();
                 }
+                return Ok(items);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+
+            List<CategoryDto> list = new List<CategoryDto>();
+            try
+            {
+                var category = new Category(this.Configuration);
+
+                //using() {
+                //}
 
                 return Ok(list);
             }
@@ -70,26 +73,11 @@ namespace Knowledge.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetCategories(int id)
+        public async Task<IActionResult> Get(int id)
         {
             try
             {
-                var db = new DB(Configuration);
-                var container = await db.getContainer();
-
-                var sqlQuery = "SELECT VALUE { id: c.id, LastName: c.LastName, Address: c.Address } FROM c";
-                QueryDefinition queryDefinition = new QueryDefinition(sqlQuery);
-                FeedIterator<Family> queryResultSetIterator = container.GetItemQueryIterator<Model.Family>(queryDefinition);
-                List<Family> families = new List<Family>();
-                while (queryResultSetIterator.HasMoreResults)
-                {
-                    FeedResponse<Family> currentResultSet = await queryResultSetIterator.ReadNextAsync();
-                    foreach (Family family in currentResultSet)
-                    {
-                        families.Add(family);
-                    }
-                }
-                return Ok(families);
+                return Ok();
             }
             catch (Exception ex)
             {
