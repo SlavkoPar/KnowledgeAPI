@@ -7,6 +7,7 @@ namespace Knowledge.Model
 {
     public class Category
     {
+        public string type { get; set; }
 
         [JsonProperty(PropertyName = "id")]
         public string Id { get; set; }
@@ -26,7 +27,7 @@ namespace Knowledge.Model
 
         public static Db? Db { get; set; } = null;
 
-        private readonly string containerId = "Categories";
+        private readonly string containerId = "Questions";
         public static Container? container { get; set; } = null;
 
         public static string? partitionKey { get; set; } = null;
@@ -42,6 +43,7 @@ namespace Knowledge.Model
 
         public Category(CategoryData categoryData)
         {
+            this.type = "category";
             this.Id = categoryData.id;
             this.PartitionKey = categoryData.PartitionKey!;
             this.title = categoryData.title;
@@ -76,7 +78,7 @@ namespace Knowledge.Model
                 categoryData.PartitionKey = Category.partitionKey;
             }
             // Create a category object 
-            Category category = new Category(categoryData: categoryData);
+            Category category = new Category(categoryData);
             try
             {
                 // Read the item to see if it exists.  
@@ -103,6 +105,17 @@ namespace Knowledge.Model
                         subCategoryData.parentCategory = category.Id;
                         subCategoryData.PartitionKey = Category.partitionKey;
                         await this.AddCategory(subCategoryData);
+                    }
+                }
+                // questions
+                if (categoryData.questions != null)
+                {
+                    Question question = new Question(Category.Db!);   
+                    foreach (var questionData in categoryData.questions)
+                    {
+                        questionData.parentCategory = category.Id;
+                        questionData.PartitionKey = category.Id; // Category.partitionKey;
+                        await question.AddQuestion(questionData);
                     }
                 }
                 // Note that after creating the item, we can access the body of the item with the Resource property off the ItemResponse. We can also access the RequestCharge property to see the amount of RUs consumed on this request.

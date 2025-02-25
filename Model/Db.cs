@@ -14,8 +14,8 @@ namespace Knowledge.Model
         private readonly string CosmosDBAccountPrimaryKey;
 
         private CosmosClient cosmosClient;
-        private Database database;
-        private Container container;
+        private Database? database;
+        Dictionary<string, Container> containers = new Dictionary<string, Container>();
 
         // The name of the database and container we will create
         private readonly string databaseId = "Knowledge";
@@ -34,7 +34,6 @@ namespace Knowledge.Model
                     ApplicationName = "KnowledgeCosmos"
                 }
             );
-
         }
 
         private async Task<Boolean> CreateDatabaseAsync()
@@ -52,11 +51,13 @@ namespace Knowledge.Model
         /// Specifiy "/partitionKey" as the partition key path since we're storing family information, to ensure good distribution of requests and storage.
         /// </summary>
         /// <returns></returns>
-        private async Task CreateContainerAsync(string containerId)
+        private async Task<Container> CreateContainerAsync(string containerId)
         {
             // Create a new container
-            this.container = await this.database.CreateContainerIfNotExistsAsync(containerId, "/partitionKey");
-            Console.WriteLine("Created Container: {0}\n", this.container.Id);
+            var container = await this.database!.CreateContainerIfNotExistsAsync(containerId, "/partitionKey");
+            this.containers.Add(containerId, container);
+            Console.WriteLine("Created Container: {0}\n", this.containers[containerId].Id);
+            return container;
         }
         // </CreateContainerAsync>
 
@@ -67,18 +68,19 @@ namespace Knowledge.Model
         /// You can scale the throughput (RU/s) of your container up and down to meet the needs of the workload. Learn more: https://aka.ms/cosmos-request-units
         /// </summary>
         /// <returns></returns>
-        private async Task ScaleContainerAsync()
+        private async Task ScaleContainerAsync(string containerId)
         {
             // Read the current throughput
             try
             {
-                int? throughput = await this.container.ReadThroughputAsync();
+                Container container = this.containers[containerId];
+                int? throughput = await container.ReadThroughputAsync();
                 if (throughput.HasValue)
                 {
                     Console.WriteLine("Current provisioned throughput : {0}\n", throughput.Value);
                     int newThroughput = throughput.Value + 100;
                     // Update throughput
-                    await this.container.ReplaceThroughputAsync(newThroughput);
+                    await container.ReplaceThroughputAsync(newThroughput);
                     Console.WriteLine("New provisioned throughput : {0}\n", newThroughput);
                 }
             }
@@ -119,15 +121,25 @@ namespace Knowledge.Model
 
         public async Task<Container> GetContainer(string containerId)
         {
-            bool created  = await this.CreateDatabaseAsync();
-            if (created)
+            if (this.database == null)
             {
-                await this.AddInitialData();
+                bool created = await this.CreateDatabaseAsync();
+                if (created)
+                {
+                    await this.AddInitialData();
+                }
             }
-            await this.CreateContainerAsync(containerId);
-            //await this.ScaleContainerAsync();
-
-            return this.container;
+            Container? container = null;
+            if (this.containers.ContainsKey(containerId))
+            {
+                container = this.containers[containerId];
+            }
+            else 
+            {
+                container = await this.CreateContainerAsync(containerId);
+                //await this.ScaleContainerAsync();
+            }
+            return container;
         }
 
         // <GetStartedAsync>

@@ -14,13 +14,12 @@ namespace Knowledge.Controllers
     public class CategoryController : ControllerBase
     {
         private readonly IConfiguration Configuration;
-        private readonly string containerId = "Items";
+        private readonly string containerId = "Questions";
 
         public CategoryController(IConfiguration configuration)
         {
             Configuration = configuration;
         }
-
        
 
         // GET api/<FamilyController>
@@ -33,13 +32,13 @@ namespace Knowledge.Controllers
                 var container = await Db.GetContainer(containerId);
 
                 // OR c.parentCategory = ''
-                var sqlQuery = $"SELECT * FROM c WHERE " + (
+                var sqlQuery = "SELECT * FROM c WHERE c.type = 'category' AND " + (
                     (parentCategory == "null")
                         ? "IS_NULL(c.parentCategory)" 
                         : $"c.parentCategory = '{parentCategory}'"
                 );
                 QueryDefinition queryDefinition = new QueryDefinition(sqlQuery);
-                FeedIterator<Category> queryResultSetIterator = container.GetItemQueryIterator<Model.Category>(queryDefinition);
+                FeedIterator<Category> queryResultSetIterator = container.GetItemQueryIterator<Category>(queryDefinition);
                 List<CategoryDto> items = new List<CategoryDto>();
                 while (queryResultSetIterator.HasMoreResults)
                 {
