@@ -1,4 +1,5 @@
-﻿using Microsoft.Azure.Cosmos;
+﻿using Azure;
+using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Linq;
 using Newtonsoft.Json;
 using System.Net;
@@ -24,10 +25,11 @@ namespace Knowledge.Model
         public WhoWhen created { get; set; }
         public WhoWhen? modified { get; set; }
         public WhoWhen? archived { get; set; }
+        public IList<Question>? questions { get; set; }
 
         public static Db? Db { get; set; } = null;
 
-        private readonly string containerId = "Questions";
+        private static readonly string containerId = "Questions";
         public static Container? container { get; set; } = null;
 
         public static string? partitionKey { get; set; } = null;
@@ -65,11 +67,51 @@ namespace Knowledge.Model
             this.archived = null;
         }
 
+
+        public static async Task<Category> GetCategory(string partitionKey, string id, bool hidrate)
+        {
+            if (Category.container == null)
+            {
+                Category.container = await Category.Db!.GetContainer(Category.containerId);
+            }
+            try
+            {
+                // Read the item to see if it exists.  
+                //ItemResponse<Category> aResponse =
+                Category category = await Category.container.ReadItemAsync<Category>(id, new PartitionKey(partitionKey));
+                if (category != null && category.numOfQuestions > 0 && hidrate)
+                {
+                    // OR c.parentCategory = ''
+                    var sqlQuery = "SELECT * FROM c WHERE c.type = 'question' AND IS_NULL(c.archived)" +
+                        $" AND c.parentCategory = '{id}'";
+                    QueryDefinition queryDefinition = new QueryDefinition(sqlQuery);
+                    FeedIterator<Question> queryResultSetIterator = container.GetItemQueryIterator<Question>(queryDefinition);
+                    List<Question> questions = new List<Question>();
+                    while (queryResultSetIterator.HasMoreResults)
+                    {
+                        FeedResponse<Question> currentResultSet = await queryResultSetIterator.ReadNextAsync();
+                        foreach (Question question in currentResultSet)
+                        {
+                            questions.Add(question);
+                        }
+                    }
+                    category.questions = questions;
+                }
+                return category;
+            }
+            catch (Exception ex)
+            {
+                // Note that after creating the item, we can access the body of the item with the Resource property off the ItemResponse. We can also access the RequestCharge property to see the amount of RUs consumed on this request.
+                Console.WriteLine(ex.Message);
+            }
+            return null;
+        }
+
         public async Task AddCategory(CategoryData categoryData)
         {
             if (Category.container == null)
             {
-                Category.container = await Category.Db!.GetContainer(this.containerId);
+                Category.container = await Category.Db!.GetContainer(Category.containerId);
             }
 
             if (categoryData.parentCategory == null)

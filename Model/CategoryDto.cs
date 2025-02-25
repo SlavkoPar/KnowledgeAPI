@@ -18,6 +18,7 @@ namespace Knowledge.Model
         public IList<string>? variations { get; set; }
         public int numOfQuestions { get; set; }
         public bool hasSubCategories { get; set; }
+        public IList<QuestionDto>? questions { get; set; }
 
         public CategoryDto(Category category)
         {
@@ -30,7 +31,26 @@ namespace Knowledge.Model
             this.variations = category.variations;
             this.numOfQuestions = category.numOfQuestions;
             this.hasSubCategories = category.hasSubCategories;
+
+            if (category.questions == null)
+            {
+                this.questions = null;
+            }
+            else
+            {
+                IList<QuestionDto> list = new List<QuestionDto>();
+                foreach (var q in category.questions)
+                    list.Add(new QuestionDto(q));
+                this.questions = list;
+            }
         }
+
+        //public CategoryDto(Category category, IList<Question> questions)
+        //    : this(category)
+        //{
+        //    this.questions = questions;
+
+        //}
 
     }
 }

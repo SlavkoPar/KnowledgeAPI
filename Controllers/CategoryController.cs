@@ -71,12 +71,19 @@ namespace Knowledge.Controllers
             }
         }
 
-        [HttpGet("{id}")]
-        public async Task<IActionResult> Get(int id)
+        [HttpGet("{id}/{partitionKey}/{hidrate}")]
+        public async Task<IActionResult> Get(string partitionKey, string id, bool hidrate = false)
         {
             try
             {
-                return Ok();
+                Category.Db = new Db(this.Configuration);
+               // var container = await Db.GetContainer(this.containerId);
+                Category category = await Category.GetCategory(partitionKey, id, hidrate);
+                if (category != null)
+                {
+                    return Ok(new CategoryDto(category));
+                }
+                return NotFound();
             }
             catch (Exception ex)
             {
