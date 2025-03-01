@@ -1,4 +1,5 @@
 ﻿using Azure;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Linq;
 using Newtonsoft.Json;
@@ -65,10 +66,64 @@ namespace Knowledge.Model
             this.created = new WhoWhen("Admin");
             this.modified = null;
             this.archived = null;
+            this.questions = null;
+        }
+
+        internal static async Task<List<Category>> GetAllCategories()
+        {
+            if (Category.container == null)
+            {
+                Category.container = await Category.Db!.GetContainer(Category.containerId);
+            }
+            // OR c.parentCategory = ''
+            var sqlQuery = "SELECT * FROM c WHERE c.type = 'category' AND IS_NULL(c.archived) ORDER BY c.Title ASC";
+            QueryDefinition queryDefinition = new QueryDefinition(sqlQuery);
+            FeedIterator<Category> queryResultSetIterator = container.GetItemQueryIterator<Category>(queryDefinition);
+            //List<CategoryDto> subCategories = new List<CategoryDto>();
+            List<Category> subCategories = new List<Category>();
+            while (queryResultSetIterator.HasMoreResults)
+            {
+                FeedResponse<Category> currentResultSet = await queryResultSetIterator.ReadNextAsync();
+                foreach (Category category in currentResultSet)
+                {
+                    //subCategories.Add(new CategoryDto(category));
+                    subCategories.Add(category);
+                }
+            }
+            return subCategories;
         }
 
 
-        public static async Task<Category> GetCategory(string partitionKey, string id, bool hidrate)
+        internal static async Task<List<Category>> GetSubCategories(string parentCategory)
+        {
+            if (Category.container == null)
+            {
+                Category.container = await Category.Db!.GetContainer(Category.containerId);
+            }
+            // OR c.parentCategory = ''
+            var sqlQuery = "SELECT * FROM c WHERE c.type = 'category' AND IS_NULL(c.archived) AND " + (
+                (parentCategory == "null")
+                    ? "IS_NULL(c.parentCategory)"
+                    : $"c.parentCategory = '{parentCategory}'"
+            );
+            QueryDefinition queryDefinition = new QueryDefinition(sqlQuery);
+            FeedIterator<Category> queryResultSetIterator = container.GetItemQueryIterator<Category>(queryDefinition);
+            //List<CategoryDto> subCategories = new List<CategoryDto>();
+            List<Category> subCategories = new List<Category>();
+            while (queryResultSetIterator.HasMoreResults)
+            {
+                FeedResponse<Category> currentResultSet = await queryResultSetIterator.ReadNextAsync();
+                foreach (Category category in currentResultSet)
+                {
+                    //subCategories.Add(new CategoryDto(category));
+                    subCategories.Add(category);
+                }
+            }
+            return subCategories;
+        }
+
+
+        public static async Task<Category> GetCategory(string partitionKey, string id, bool hidrate, int pageSize)
         {
             if (Category.container == null)
             {
@@ -79,23 +134,9 @@ namespace Knowledge.Model
                 // Read the item to see if it exists.  
                 //ItemResponse<Category> aResponse =
                 Category category = await Category.container.ReadItemAsync<Category>(id, new PartitionKey(partitionKey));
-                if (category != null && category.numOfQuestions > 0 && hidrate)
+                if (hidrate && category != null && category.numOfQuestions > 0)
                 {
-                    // OR c.parentCategory = ''
-                    var sqlQuery = "SELECT * FROM c WHERE c.type = 'question' AND IS_NULL(c.archived)" +
-                        $" AND c.parentCategory = '{id}'";
-                    QueryDefinition queryDefinition = new QueryDefinition(sqlQuery);
-                    FeedIterator<Question> queryResultSetIterator = container.GetItemQueryIterator<Question>(queryDefinition);
-                    List<Question> questions = new List<Question>();
-                    while (queryResultSetIterator.HasMoreResults)
-                    {
-                        FeedResponse<Question> currentResultSet = await queryResultSetIterator.ReadNextAsync();
-                        foreach (Question question in currentResultSet)
-                        {
-                            questions.Add(question);
-                        }
-                    }
-                    category.questions = questions;
+                    category.questions = await Question.GetQuestions(id, 0, pageSize);
                 }
                 return category;
             }
@@ -152,13 +193,27 @@ namespace Knowledge.Model
                 // questions
                 if (categoryData.questions != null)
                 {
-                    Question question = new Question(Category.Db!);   
+                    Question question = new Question(Category.Db!);
+                    if (categoryData.id == "DOMAIN") {
+                        for (var i=0; i<500; i++)
+                            categoryData.questions.Add(new QuestionData(category.Id, $"Demo data for DOMAIN {i}"));
+                    }
+
                     foreach (var questionData in categoryData.questions)
                     {
                         questionData.parentCategory = category.Id;
-                        questionData.PartitionKey = category.Id; // Category.partitionKey;
+                        questionData.PartitionKey = category.Id;
                         await question.AddQuestion(questionData);
                     }
+                    //if (categoryData.id == "DOMAIN")
+                    //{
+                        //for(var i=0; i<500; i++)
+                        //{
+                        //    var questionData = new QuestionData(category.Id, $"Demo data for DOMAIN {i}");
+                        //    Question q = new Question(questionData);
+                        //    await question.AddQuestion(q);
+                        //}
+                    //}
                 }
                 // Note that after creating the item, we can access the body of the item with the Resource property off the ItemResponse. We can also access the RequestCharge property to see the amount of RUs consumed on this request.
                 Console.WriteLine("Created item in database with id: {0} Operation consumed {1} RUs.\n", aResponse.Resource.Id, aResponse.RequestCharge);
@@ -169,6 +224,7 @@ namespace Knowledge.Model
                 Console.WriteLine(ex.Message);
             }
         }
+
     }
 }
 

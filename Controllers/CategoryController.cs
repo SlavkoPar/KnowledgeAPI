@@ -4,6 +4,7 @@ using Knowledge.Model;
 using Microsoft.Extensions.Configuration;
 using System.Configuration;
 using Newtonsoft.Json;
+using Microsoft.Azure.Cosmos.Serialization.HybridRow.Schemas;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -20,50 +21,26 @@ namespace Knowledge.Controllers
         {
             Configuration = configuration;
         }
-       
 
         // GET api/<FamilyController>
         [HttpGet]
-        public async Task<IActionResult> GetCategories(string parentCategory)
+        public async Task<IActionResult> GetAllCategories()
         {
             try
             {
-                var Db = new Db(this.Configuration);
-                var container = await Db.GetContainer(containerId);
-
-                // OR c.parentCategory = ''
-                var sqlQuery = "SELECT * FROM c WHERE c.type = 'category' AND " + (
-                    (parentCategory == "null")
-                        ? "IS_NULL(c.parentCategory)" 
-                        : $"c.parentCategory = '{parentCategory}'"
-                );
-                QueryDefinition queryDefinition = new QueryDefinition(sqlQuery);
-                FeedIterator<Category> queryResultSetIterator = container.GetItemQueryIterator<Category>(queryDefinition);
-                List<CategoryDto> items = new List<CategoryDto>();
-                while (queryResultSetIterator.HasMoreResults)
+                Category.Db = new Db(this.Configuration);
+                // var container = await Db.GetContainer(this.containerId);
+                List<Category> subCategories = await Category.GetAllCategories();
+                if (subCategories != null)
                 {
-                    FeedResponse<Category> currentResultSet = await queryResultSetIterator.ReadNextAsync();
-                    foreach (Category category in currentResultSet)
+                    List<CategoryDto> list = new List<CategoryDto>();
+                    foreach (Category category in subCategories)
                     {
-                        items.Add(new CategoryDto(category));
+                        list.Add(new CategoryDto(category));
                     }
+                    return Ok(list);
                 }
-                return Ok(items);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-
-            List<CategoryDto> list = new List<CategoryDto>();
-            try
-            {
-                var category = new Category(this.Configuration);
-
-                //using() {
-                //}
-
-                return Ok(list);
+                return NotFound();
             }
             catch (Exception ex)
             {
@@ -71,14 +48,40 @@ namespace Knowledge.Controllers
             }
         }
 
-        [HttpGet("{id}/{partitionKey}/{hidrate}")]
-        public async Task<IActionResult> Get(string partitionKey, string id, bool hidrate = false)
+        // GET api/<FamilyController>
+        [HttpGet("{parentCategory}")]
+        public async Task<IActionResult> GetSubCategories(string parentCategory)
+        {
+            try
+            {
+                Category.Db = new Db(this.Configuration);
+                // var container = await Db.GetContainer(this.containerId);
+                List<Category> subCategories = await Category.GetSubCategories(parentCategory);
+                if (subCategories != null)
+                {
+                    List<CategoryDto> list = new List<CategoryDto>();
+                    foreach (Category category in subCategories)
+                    {
+                        list.Add(new CategoryDto(category));
+                    }
+                    return Ok(list);
+                }
+                return NotFound();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpGet("{partitionKey}/{id}/{hidrate}/{pageSize}")]
+        public async Task<IActionResult> Get(string partitionKey, string id, bool hidrate, int pageSize)
         {
             try
             {
                 Category.Db = new Db(this.Configuration);
                // var container = await Db.GetContainer(this.containerId);
-                Category category = await Category.GetCategory(partitionKey, id, hidrate);
+                Category category = await Category.GetCategory(partitionKey, id, hidrate, pageSize);
                 if (category != null)
                 {
                     return Ok(new CategoryDto(category));
@@ -91,7 +94,6 @@ namespace Knowledge.Controllers
             }
         }
 
-        
 
         // POST api/<FamilyController>
         [HttpPost]

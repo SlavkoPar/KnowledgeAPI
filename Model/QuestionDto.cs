@@ -7,11 +7,11 @@ namespace Knowledge.Model
 {
     public class QuestionDto
     {
-
+        // public string PartitionKey { get; set; }
         [JsonProperty(PropertyName = "id")]
         public string Id { get; set; }
         public string title { get; set; }
-        public string? parentCategory { get; set; }
+        // public string? parentCategory { get; set; }
         public List<long>? assignedAnswers { get; set; }
         public int source { get; set; }
         public int status { get; set; }
@@ -24,12 +24,13 @@ namespace Knowledge.Model
         {
             this.Id = question.Id;
             this.title = question.title;
-            this.parentCategory = question.parentCategory;
+            //this.parentCategory = question.parentCategory;
             this.source = question.source;
             this.status = question.status;
             this.created = question.created;
             this.modified = question.modified;
             this.archived = question.archived;
+            //this.PartitionKey = question.PartitionKey;  
         }
 
     }

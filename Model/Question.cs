@@ -26,7 +26,7 @@ namespace Knowledge.Model
 
         public static Db? Db { get; set; } = null;
 
-        private readonly string containerId = "Questions";
+        private static readonly string containerId = "Questions";
         public static Container? container { get; set; } = null;
 
         public static string? partitionKey { get; set; } = null;
@@ -59,6 +59,7 @@ namespace Knowledge.Model
             //        .Where(w => w.Length > 1)
             //        .ToList();
             this.parentCategory = questionData.parentCategory;
+            this.assignedAnswers = [];
             this.created = new WhoWhen("Admin");
             this.modified = null;
             this.archived = null;
@@ -70,7 +71,8 @@ namespace Knowledge.Model
             QueryDefinition queryDefinition = new QueryDefinition(sqlQuery);
             FeedIterator<Question> queryResultSetIterator =
                 Question.container!.GetItemQueryIterator<Question>(queryDefinition);
-            if (queryResultSetIterator.HasMoreResults) {
+            if (queryResultSetIterator.HasMoreResults)
+            {
                 FeedResponse<Question> currentResultSet = await queryResultSetIterator.ReadNextAsync();
                 if (currentResultSet.Count == 0)
                 {
@@ -84,7 +86,7 @@ namespace Knowledge.Model
         {
             if (Question.container == null)
             {
-                Question.container = await Question.Db!.GetContainer(this.containerId);
+                Question.container = await Question.Db!.GetContainer(Question.containerId);
             }
 
             if (questionData.parentCategory == null)
@@ -119,6 +121,59 @@ namespace Knowledge.Model
                 Console.WriteLine(ex.Message);
             }
         }
+
+        public static async Task<Question> GetQuestion(string partitionKey, string id)
+        {
+            if (Question.container == null)
+            {
+                Question.container = await Question.Db!.GetContainer(Question.containerId);
+            }
+            try
+            {
+                Question question = await Question.container.ReadItemAsync<Question>(id, new PartitionKey(partitionKey));
+                return question;
+            }
+            catch (Exception ex)
+            {
+                // Note that after creating the item, we can access the body of the item with the Resource property off the ItemResponse. We can also access the RequestCharge property to see the amount of RUs consumed on this request.
+                Console.WriteLine(ex.Message);
+            }
+            return null;
+        }
+
+        public static async Task<List<Question>> GetQuestions(string parentCategory, int page, int pageSize)
+        {
+            if (Question.container == null)
+            {
+                Question.container = await Question.Db!.GetContainer(Question.containerId);
+            }
+            List<Question> questions = new List<Question>();
+            try
+            {
+                var offset = page * pageSize;
+                // OR c.parentCategory = ''
+                var sqlQuery = "SELECT * FROM c WHERE c.type = 'question' AND IS_NULL(c.archived) AND " +
+                    $"c.parentCategory = '{parentCategory}' ORDER BY c.title OFFSET {offset} LIMIT {pageSize}";
+                QueryDefinition queryDefinition = new QueryDefinition(sqlQuery);
+                FeedIterator<Question> queryResultSetIterator = container.GetItemQueryIterator<Question>(queryDefinition);
+                while (queryResultSetIterator.HasMoreResults)
+                {
+                    FeedResponse<Question> currentResultSet = await queryResultSetIterator.ReadNextAsync();
+                    foreach (Question question in currentResultSet)
+                    {
+                        questions.Add(question);
+                    }
+                }
+                return questions;
+            }
+            catch (Exception ex)
+            {
+                // Note that after creating the item, we can access the body of the item with the Resource property off the ItemResponse. We can also access the RequestCharge property to see the amount of RUs consumed on this request.
+                Console.WriteLine(ex.Message);
+            }
+            return questions;
+        }
+
+
     }
 }
-

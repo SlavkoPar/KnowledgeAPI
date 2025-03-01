@@ -18,7 +18,15 @@ namespace Knowledge.Model
         public IList<string>? variations { get; set; }
         public int numOfQuestions { get; set; }
         public bool hasSubCategories { get; set; }
+        public WhoWhen created { get; set; }
+        public WhoWhen? modified { get; set; }
+        public WhoWhen? archived { get; set; }
         public IList<QuestionDto>? questions { get; set; }
+
+        public  CategoryDto(IList<Question> questions)
+        {
+            this.questions = this.Questions2Dto(questions);
+        }
 
         public CategoryDto(Category category)
         {
@@ -31,19 +39,48 @@ namespace Knowledge.Model
             this.variations = category.variations;
             this.numOfQuestions = category.numOfQuestions;
             this.hasSubCategories = category.hasSubCategories;
-
+            this.created = category.created;
+            this.modified = category.modified;
+            this.archived = category.archived;
             if (category.questions == null)
             {
                 this.questions = null;
             }
             else
             {
-                IList<QuestionDto> list = new List<QuestionDto>();
-                foreach (var q in category.questions)
-                    list.Add(new QuestionDto(q));
-                this.questions = list;
+                //IList<QuestionDto> questions = new List<QuestionDto>();
+                //foreach (var question in category.questions)
+                //    questions.Add(new QuestionDto(question));
+                this.questions = this.Questions2Dto(category.questions);
             }
+
         }
+
+        public IList<QuestionDto> Questions2Dto(IList<Question> questions)
+        {
+            IList<QuestionDto> list = new List<QuestionDto>();
+            foreach (var question in questions)
+            {
+                list.Add(new QuestionDto(question));
+            }
+            return list;
+        }
+
+        //public CategoryDto(Category category, IList<Question> questions)
+        //    : this(category)
+        //{
+        //    if (questions == null)
+        //    {
+        //        this.questions = null;
+        //    }
+        //    else
+        //    {
+        //        IList<QuestionDto> list = new List<QuestionDto>();
+        //        foreach (var q in questions)
+        //            list.Add(new QuestionDto(q));
+        //        this.questions = list;
+        //    }
+        //}
 
         //public CategoryDto(Category category, IList<Question> questions)
         //    : this(category)
