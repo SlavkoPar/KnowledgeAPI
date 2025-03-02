@@ -23,15 +23,15 @@ namespace Knowledge.Controllers
         }
 
 
-        [HttpGet("{parentCategory}/{page}/{pageSize}")]
-        public async Task<IActionResult> GetQuestions(string parentCategory, int page, int pageSize)
+        [HttpGet("{parentCategory}/{startCursor}/{pageSize}/{includeQuestionId}")]
+        public async Task<IActionResult> GetQuestions(string parentCategory, int startCursor, int pageSize, string? includeQuestionId)
         {
             try
             {
                 Question.Db = new Db(this.Configuration);
                 // var container = await Db.GetContainer(this.containerId);
-                List<Question> questions = await Question.GetQuestions(parentCategory, page, pageSize);
-                var categoryDto = new CategoryDto(questions);
+                QuestionsMore questionsMore = await Question.GetQuestions(parentCategory, startCursor, pageSize, includeQuestionId);
+                var categoryDto = new CategoryDto(questionsMore);
                 return Ok(categoryDto.questions);
             }
             catch (Exception ex)

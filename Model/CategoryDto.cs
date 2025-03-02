@@ -23,9 +23,9 @@ namespace Knowledge.Model
         public WhoWhen? archived { get; set; }
         public IList<QuestionDto>? questions { get; set; }
 
-        public  CategoryDto(IList<Question> questions)
+        public  CategoryDto(QuestionsMore questionsMore)
         {
-            this.questions = this.Questions2Dto(questions);
+            this.questions = this.Questions2Dto(questionsMore.questions);
         }
 
         public CategoryDto(Category category)

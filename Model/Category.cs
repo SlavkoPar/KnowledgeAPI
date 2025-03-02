@@ -18,7 +18,6 @@ namespace Knowledge.Model
         public string title { get; set; }
         public int kind { get; set; }
         public string? parentCategory { get; set; }
-        // public IList<string> words { get; set; }
         public int level { get; set; }
         public IList<string>? variations { get; set; }
         public int numOfQuestions { get; set; }
@@ -27,6 +26,7 @@ namespace Knowledge.Model
         public WhoWhen? modified { get; set; }
         public WhoWhen? archived { get; set; }
         public IList<Question>? questions { get; set; }
+        public bool? hasMoreQuestions { get; set; }
 
         public static Db? Db { get; set; } = null;
 
@@ -67,6 +67,7 @@ namespace Knowledge.Model
             this.modified = null;
             this.archived = null;
             this.questions = null;
+
         }
 
         internal static async Task<List<Category>> GetAllCategories()
@@ -94,17 +95,22 @@ namespace Knowledge.Model
         }
 
 
-        internal static async Task<List<Category>> GetSubCategories(string parentCategory)
+        internal static async Task<List<Category>> GetSubCategories(string partitionKey, string parentCategory)
         {
             if (Category.container == null)
             {
                 Category.container = await Category.Db!.GetContainer(Category.containerId);
             }
             // OR c.parentCategory = ''
-            var sqlQuery = "SELECT * FROM c WHERE c.type = 'category' AND IS_NULL(c.archived) AND " + (
+            var sqlQuery = $"SELECT * FROM c WHERE c.type = 'category' AND IS_NULL(c.archived) AND " + (
+                (partitionKey == "null")
+                    ? $""
+                    : $" c.partitionKey = '{partitionKey}' AND "
+            )
+            + (
                 (parentCategory == "null")
-                    ? "IS_NULL(c.parentCategory)"
-                    : $"c.parentCategory = '{parentCategory}'"
+                    ? $" IS_NULL(c.parentCategory)"
+                    : $" c.parentCategory = '{parentCategory}'"
             );
             QueryDefinition queryDefinition = new QueryDefinition(sqlQuery);
             FeedIterator<Category> queryResultSetIterator = container.GetItemQueryIterator<Category>(queryDefinition);
@@ -123,7 +129,8 @@ namespace Knowledge.Model
         }
 
 
-        public static async Task<Category> GetCategory(string partitionKey, string id, bool hidrate, int pageSize)
+ 
+        public static async Task<Category> GetCategory(string partitionKey, string id, bool hidrate, int? pageSize, string includeQuestionId)
         {
             if (Category.container == null)
             {
@@ -134,9 +141,11 @@ namespace Knowledge.Model
                 // Read the item to see if it exists.  
                 //ItemResponse<Category> aResponse =
                 Category category = await Category.container.ReadItemAsync<Category>(id, new PartitionKey(partitionKey));
-                if (hidrate && category != null && category.numOfQuestions > 0)
+                if (hidrate == true && category != null && category.numOfQuestions > 0)
                 {
-                    category.questions = await Question.GetQuestions(id, 0, pageSize);
+                    QuestionsMore questionsMore = await Question.GetQuestions(id, 0, (int)pageSize, includeQuestionId);
+                    category.questions = questionsMore.questions;
+                    category.hasMoreQuestions = questionsMore.hasMoreQuestions;
                 }
                 return category;
             }

@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Drawing.Printing;
+using System.Net;
 using Microsoft.Azure.Cosmos;
 using Newtonsoft.Json;
 
@@ -128,32 +129,46 @@ namespace Knowledge.Model
             {
                 Question.container = await Question.Db!.GetContainer(Question.containerId);
             }
+
+            Question question = null;
             try
             {
-                Question question = await Question.container.ReadItemAsync<Question>(id, new PartitionKey(partitionKey));
-                return question;
+                // Read the item to see if it exists.  
+                question = await Question.container.ReadItemAsync<Question>(
+                    id,
+                    new PartitionKey(partitionKey)
+                );
+            }
+            catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+            {
             }
             catch (Exception ex)
             {
                 // Note that after creating the item, we can access the body of the item with the Resource property off the ItemResponse. We can also access the RequestCharge property to see the amount of RUs consumed on this request.
                 Console.WriteLine(ex.Message);
             }
-            return null;
+            return question;
         }
 
-        public static async Task<List<Question>> GetQuestions(string parentCategory, int page, int pageSize)
+        public static async Task<QuestionsMore> GetQuestions(string parentCategory, int startCursor, int pageSize, string includeQuestionId)
         {
             if (Question.container == null)
             {
                 Question.container = await Question.Db!.GetContainer(Question.containerId);
             }
             List<Question> questions = new List<Question>();
+            bool hasMore = false;
             try
             {
-                var offset = page * pageSize;
                 // OR c.parentCategory = ''
-                var sqlQuery = "SELECT * FROM c WHERE c.type = 'question' AND IS_NULL(c.archived) AND " +
-                    $"c.parentCategory = '{parentCategory}' ORDER BY c.title OFFSET {offset} LIMIT {pageSize}";
+                var sqlQuery = $"SELECT * FROM c WHERE c.type = 'question' AND IS_NULL(c.archived) AND c.parentCategory = '{parentCategory}' ORDER BY c.title ";
+                sqlQuery += includeQuestionId == null
+                    ? $"OFFSET {startCursor} LIMIT {pageSize}"
+                    : $"OFFSET {startCursor} LIMIT 9999";
+
+                int n = 0;
+                bool included = false;
+
                 QueryDefinition queryDefinition = new QueryDefinition(sqlQuery);
                 FeedIterator<Question> queryResultSetIterator = container.GetItemQueryIterator<Question>(queryDefinition);
                 while (queryResultSetIterator.HasMoreResults)
@@ -161,17 +176,26 @@ namespace Knowledge.Model
                     FeedResponse<Question> currentResultSet = await queryResultSetIterator.ReadNextAsync();
                     foreach (Question question in currentResultSet)
                     {
+                        if (includeQuestionId != "null" && question.Id == includeQuestionId)
+                        {
+                            included = true;
+                        }
                         questions.Add(question);
+                        n++;
+                        if (n >= pageSize && (includeQuestionId != "null" ? included : true))
+                        {
+                            hasMore = true;
+                            return new QuestionsMore(questions, hasMore);
+                        }
                     }
                 }
-                return questions;
             }
             catch (Exception ex)
             {
                 // Note that after creating the item, we can access the body of the item with the Resource property off the ItemResponse. We can also access the RequestCharge property to see the amount of RUs consumed on this request.
                 Console.WriteLine(ex.Message);
             }
-            return questions;
+            return new QuestionsMore(questions, hasMore);
         }
 
 

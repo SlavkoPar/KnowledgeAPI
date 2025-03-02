@@ -20,5 +20,16 @@ namespace Knowledge.Model
         public WhoWhen? modified { get; set; }
         public WhoWhen? archived { get; set; }
     }
+
+    public class QuestionsMore
+    {
+        public IList<Question> questions { get; set; }
+        public bool hasMoreQuestions { get; set; }
+        public QuestionsMore(List<Question> questions, bool hasMoreQuestions)
+        {
+            this.questions = questions;
+            this.hasMoreQuestions = hasMoreQuestions;
+        }
+    }
 }
 
