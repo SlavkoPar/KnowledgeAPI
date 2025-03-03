@@ -170,6 +170,13 @@ namespace Knowledge.Model
                 categoryData.PartitionKey = Category.partitionKey;
             }
             // Create a category object 
+            if (categoryData.id == "DOMAIN")
+            {
+                for (var i = 1; i <= 500; i++)
+                    categoryData.questions.Add(new QuestionData(categoryData.id, $"Demo data for DOMAIN {i}"));
+            }
+
+
             Category category = new Category(categoryData);
             try
             {
@@ -203,10 +210,10 @@ namespace Knowledge.Model
                 if (categoryData.questions != null)
                 {
                     Question question = new Question(Category.Db!);
-                    if (categoryData.id == "DOMAIN") {
-                        for (var i=0; i<500; i++)
-                            categoryData.questions.Add(new QuestionData(category.Id, $"Demo data for DOMAIN {i}"));
-                    }
+                    //if (categoryData.id == "DOMAIN") {
+                    //    for (var i=0; i<500; i++)
+                    //        categoryData.questions.Add(new QuestionData(category.Id, $"Demo data for DOMAIN {i}"));
+                    //}
 
                     foreach (var questionData in categoryData.questions)
                     {

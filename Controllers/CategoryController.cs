@@ -49,7 +49,6 @@ namespace Knowledge.Controllers
             }
         }
 
-        // GET api/<FamilyController>
         [HttpGet("{partitionKey}/{parentCategory}")]
         public async Task<IActionResult> GetSubCategories(string partitionKey, string parentCategory)
         {
@@ -75,96 +74,9 @@ namespace Knowledge.Controllers
             }
         }
 
-        //[HttpGet("{partitionKey}/{id}")]
-        //public async Task<IActionResult> GetCategory(string partitionKey, string id)
-        //{
-        //    try
-        //    {
-        //        // TODO 1. ovo 2. what does  /partitionKey mean?
-        //        Category.Db = new Db(this.Configuration);
-        //        Question.Db = Category.Db;
-        //        // var container = await Db.GetContainer(this.containerId);
-        //        Category category = await Category.GetCategory(partitionKey, id);
-        //        if (category != null)
-        //        {
-        //            return Ok(new CategoryDto(category));
-        //        }
-        //        return NotFound();
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return BadRequest(ex.Message);
-        //    }
-        //}
 
-        //[HttpGet("{partitionKey}/{id}/{pageSize}")]
-        //public async Task<IActionResult> GetCategory(string partitionKey, string id, int pageSize)
-        //{
-        //    try
-        //    {
-        //        // TODO 1. ovo 2. what does  /partitionKey mean?
-        //        Category.Db = new Db(this.Configuration);
-        //        Question.Db = Category.Db;
-        //        // var container = await Db.GetContainer(this.containerId);
-        //        Category category = await Category.GetCategory(partitionKey, id, pageSize, 0, null);
-        //        if (category != null)
-        //        {
-        //            return Ok(new CategoryDto(category));
-        //        }
-        //        return NotFound();
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return BadRequest(ex.Message);
-        //    }
-        //}
-
-
-        //[HttpGet("{partitionKey}/{id}")]
-        //public async Task<IActionResult> GetCategory(string partitionKey, string id)
-        //{
-        //    try
-        //    {
-        //        // TODO 1. ovo 2. what does  /partitionKey mean?
-        //        Category.Db = new Db(this.Configuration);
-        //        Question.Db = Category.Db;
-        //       // var container = await Db.GetContainer(this.containerId);
-        //        Category category = await Category.GetCategory(partitionKey, id);
-        //        if (category != null)
-        //        {
-        //            return Ok(new CategoryDto(category));
-        //        }
-        //        return NotFound();
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return BadRequest(ex.Message);
-        //    }
-        //}
-
-
-
-        [HttpGet("{partitionKey}/{id}/{hidrate}")]
-        public async Task<IActionResult> GetCategory(string partitionKey, string id, bool hidrate)
-        {
-            try
-            {
-                // TODO 1. ovo 2. what does  /partitionKey mean?
-                Category.Db = new Db(this.Configuration);
-                Question.Db = Category.Db;
-                // var container = await Db.GetContainer(this.containerId);
-                Category category = await Category.GetCategory(partitionKey, id, false, 0, null);
-                if (category != null)
-                {
-                    return Ok(new CategoryDto(category));
-                }
-                return NotFound();
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
+       
+                 
 
         [HttpGet("{partitionKey}/{id}/{pageSize}/{includeQuestionId}")]
         public async Task<IActionResult> GetCategory(string partitionKey, string id, int pageSize, string includeQuestionId)

@@ -32,7 +32,7 @@ namespace Knowledge.Controllers
                 // var container = await Db.GetContainer(this.containerId);
                 QuestionsMore questionsMore = await Question.GetQuestions(parentCategory, startCursor, pageSize, includeQuestionId);
                 var categoryDto = new CategoryDto(questionsMore);
-                return Ok(categoryDto.questions);
+                return Ok(categoryDto);
             }
             catch (Exception ex)
             {
@@ -41,7 +41,7 @@ namespace Knowledge.Controllers
         }
 
         [HttpGet("{parentCategory}/{id}")]
-        public async Task<IActionResult> Get(string parentCategory, string id)
+        public async Task<IActionResult> GetQuestion(string parentCategory, string id)
         {
             try
             {

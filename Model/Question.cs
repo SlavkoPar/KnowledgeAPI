@@ -161,10 +161,11 @@ namespace Knowledge.Model
             try
             {
                 // OR c.parentCategory = ''
-                var sqlQuery = $"SELECT * FROM c WHERE c.type = 'question' AND IS_NULL(c.archived) AND c.parentCategory = '{parentCategory}' ORDER BY c.title ";
-                sqlQuery += includeQuestionId == null
-                    ? $"OFFSET {startCursor} LIMIT {pageSize}"
-                    : $"OFFSET {startCursor} LIMIT 9999";
+                var sqlQuery = $"SELECT * FROM c WHERE c.type = 'question' AND IS_NULL(c.archived) AND " +
+                    $" c.parentCategory = '{parentCategory}' ORDER BY c.title OFFSET {startCursor} ";
+                sqlQuery += includeQuestionId == "null"
+                    ? $"LIMIT {pageSize}"
+                    : $"LIMIT 9999";
 
                 int n = 0;
                 bool included = false;

@@ -22,10 +22,12 @@ namespace Knowledge.Model
         public WhoWhen? modified { get; set; }
         public WhoWhen? archived { get; set; }
         public IList<QuestionDto>? questions { get; set; }
+        public bool? hasMoreQuestions { get; set; }
 
         public  CategoryDto(QuestionsMore questionsMore)
         {
             this.questions = this.Questions2Dto(questionsMore.questions);
+            this.hasMoreQuestions = this.hasMoreQuestions;
         }
 
         public CategoryDto(Category category)
@@ -45,6 +47,7 @@ namespace Knowledge.Model
             if (category.questions == null)
             {
                 this.questions = null;
+                this.hasMoreQuestions = false;
             }
             else
             {
@@ -52,6 +55,7 @@ namespace Knowledge.Model
                 //foreach (var question in category.questions)
                 //    questions.Add(new QuestionDto(question));
                 this.questions = this.Questions2Dto(category.questions);
+                this.hasMoreQuestions = category.hasMoreQuestions;
             }
 
         }

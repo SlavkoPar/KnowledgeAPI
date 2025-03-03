@@ -13,11 +13,6 @@
             {
               "id": "CLOUD",
               "title": "Cloud",
-              "questions": []
-            },
-            {
-              "id": "DOMAIN",
-              "title": "Domain",
               "questions": [
                 { "title": "Zaboravili ste pravila za naziv domena?" },
                 { "title": "Ko može da registruje internacionalni domen (.com, .net, .org, .info…)?" },
@@ -26,6 +21,13 @@
                 { "title": "Želim da postanem reseller domena i cPanel hosting paketa" },
                 { "title": "Ko sve može da registruje .СРБ domen?" },
                 { "title": "Da li mogu da koristim email na svom ćiriličnom domenu?" }
+              ]
+            },
+            {
+              "id": "DOMAIN",
+              "title": "Domain",
+              "questions": [
+
               ]
             },
             {
