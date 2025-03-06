@@ -6,6 +6,7 @@ using System.Configuration;
 using Newtonsoft.Json;
 using Microsoft.Azure.Cosmos.Serialization.HybridRow.Schemas;
 using System.ComponentModel.DataAnnotations;
+using Knowledge.Services;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -16,10 +17,13 @@ namespace Knowledge.Controllers
     public class CategoryController : ControllerBase
     {
         private readonly IConfiguration Configuration;
-        private readonly string containerId = "Questions";
+        DbService dbService { get; set; }
+
 
         public CategoryController(IConfiguration configuration)
         {
+            dbService = new DbService(configuration);
+            dbService.Initialize.Wait();
             Configuration = configuration;
         }
 
@@ -29,18 +33,23 @@ namespace Knowledge.Controllers
         {
             try
             {
-                Category.Db = new Db(this.Configuration);
-                // var container = await Db.GetContainer(this.containerId);
-                List<Category> subCategories = await Category.GetAllCategories();
+                //using (var db = new Db(this.Configuration))
+                //{
+                //    await db.Initialize;
+                //var category = new Category(_Db);
+                //List<Category> subCategories = await category.GetAllCategories();
+                var categoryService = new CategoryService(dbService);
+                List<Category> subCategories = await categoryService.GetAllCategories();
                 if (subCategories != null)
                 {
-                    List<CategoryDto> list = new List<CategoryDto>();
-                    foreach (Category category in subCategories)
+                    List<CategoryDto> list = [];
+                    foreach (Category cat in subCategories)
                     {
-                        list.Add(new CategoryDto(category));
+                        list.Add(new CategoryDto(cat));
                     }
                     return Ok(list);
                 }
+                //}
                 return NotFound();
             }
             catch (Exception ex)
@@ -54,18 +63,24 @@ namespace Knowledge.Controllers
         {
             try
             {
-                Category.Db = new Db(this.Configuration);
-                // var container = await Db.GetContainer(this.containerId);
-                List<Category> subCategories = await Category.GetSubCategories(partitionKey, parentCategory);
+                //using (var db = new Db(this.Configuration))
+                //{
+                //    await db.Initialize;
+                //var category = new Category(_Db);
+                //List<Category> subCategories = await category.GetSubCategories(partitionKey, parentCategory);
+                var categoryService = new CategoryService(dbService);
+                List<Category> subCategories = await categoryService.GetSubCategories(partitionKey, parentCategory);
+
                 if (subCategories != null)
                 {
-                    List<CategoryDto> list = new List<CategoryDto>();
-                    foreach (Category category in subCategories)
+                    List<CategoryDto> list = [];
+                    foreach (Category cat in subCategories)
                     {
-                        list.Add(new CategoryDto(category));
+                        list.Add(new CategoryDto(cat));
                     }
                     return Ok(list);
                 }
+                //}
                 return NotFound();
             }
             catch (Exception ex)
@@ -75,23 +90,31 @@ namespace Knowledge.Controllers
         }
 
 
-       
-                 
-
         [HttpGet("{partitionKey}/{id}/{pageSize}/{includeQuestionId}")]
         public async Task<IActionResult> GetCategory(string partitionKey, string id, int pageSize, string includeQuestionId)
         {
             try
             {
                 // TODO 1. ovo 2. what does  /partitionKey mean?
-                Category.Db = new Db(this.Configuration);
-                Question.Db = Category.Db;
-                // var container = await Db.GetContainer(this.containerId);
-                Category category = await Category.GetCategory(partitionKey, id, true, pageSize, includeQuestionId);
-                if (category != null)
-                {
-                    return Ok(new CategoryDto(category));
-                }
+                //using(var db = new Db(this.Configuration))
+                //{
+                //    await db.Initialize;
+                    // TODO Question.Db = db;
+                    //var category = new Category(_Db);
+                    // var container = await Db.GetContainer(this.containerId);
+                    //Category cat = await category.GetCategory(
+                    //    partitionKey, id, true, pageSize, includeQuestionId=="null" ? null : includeQuestionId);
+                var categoryService = new CategoryService(dbService);
+                Category cat = await categoryService.GetCategory(
+                       partitionKey, id, true, pageSize, includeQuestionId == "null" ? null : includeQuestionId);
+                if (cat != null)
+                    {
+                        return Ok(new CategoryDto(cat));
+                    }
+                    // TODO treba li ovo svuda
+                    //Category.Db = null;
+                    //Question.Db = null;
+                //}
                 return NotFound();
             }
             catch (Exception ex)

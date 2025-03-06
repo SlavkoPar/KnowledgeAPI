@@ -3,30 +3,33 @@ using Microsoft.Azure.Cosmos;
 using System.Collections.Generic;
 using System.Net;
 using Newtonsoft.Json;
+using Knowledge.Model;
 
-namespace Knowledge.Model
+namespace Knowledge.Services
 {
-    public class Db
+    public class DbService : IDisposable
     {
         
         private readonly IConfiguration Configuration;
         private readonly string CosmosDBAccountUri;
         private readonly string CosmosDBAccountPrimaryKey;
 
-        private CosmosClient cosmosClient;
-        private Database? database;
-        Dictionary<string, Container> containers = new Dictionary<string, Container>();
+        private CosmosClient? cosmosClient = null;
+        private Database? database = null;
+        readonly Dictionary<string, Container?> containers = [];
 
         // The name of the database and container we will create
         private readonly string databaseId = "Knowledge";
 
-        public Db(IConfiguration configuration)
+        public bool Initiated { get; protected set; }
+
+        public DbService(IConfiguration configuration)
         {
-            this.Configuration = configuration;
+            Configuration = configuration;
             CosmosDBAccountUri = configuration["CosmosDBAccountUri"];
             CosmosDBAccountPrimaryKey = configuration["CosmosDBAccountPrimaryKey"];
 
-            this.cosmosClient = new CosmosClient(
+            cosmosClient = new CosmosClient(
                 CosmosDBAccountUri,
                 CosmosDBAccountPrimaryKey,
                 new CosmosClientOptions()
@@ -34,14 +37,29 @@ namespace Knowledge.Model
                     ApplicationName = "KnowledgeCosmos"
                 }
             );
+
+            Initialize = CreateInstanceAsync();
+        }
+        public Task Initialize { get; }
+
+        private async Task CreateInstanceAsync()
+        {
+            // await Task.Delay(10);
+            bool created = await CreateDatabaseIfNotExistsAsync();
+            if (created)
+            {
+                Console.WriteLine("Created Database: {0}\n", database!.Id);
+                await AddInitialData();
+            }
+            Initiated = true;
         }
 
-        private async Task<Boolean> CreateDatabaseAsync()
+
+        private async Task<bool> CreateDatabaseIfNotExistsAsync()
         {
             // Create a new database
-            DatabaseResponse response = await this.cosmosClient.CreateDatabaseIfNotExistsAsync(this.databaseId);
-            this.database = response.Database;
-            Console.WriteLine("Created Database: {0}\n", this.database.Id);
+            DatabaseResponse response = await cosmosClient!.CreateDatabaseIfNotExistsAsync(databaseId);
+            database = response.Database;
             return response.StatusCode == HttpStatusCode.Created;
         }
 
@@ -54,9 +72,9 @@ namespace Knowledge.Model
         private async Task<Container> CreateContainerAsync(string containerId)
         {
             // Create a new container
-            var container = await this.database!.CreateContainerIfNotExistsAsync(containerId, "/partitionKey");
-            this.containers.Add(containerId, container);
-            Console.WriteLine("Created Container: {0}\n", this.containers[containerId].Id);
+            var container = await database!.CreateContainerIfNotExistsAsync(containerId, "/partitionKey");
+            containers.Add(containerId, container);
+            Console.WriteLine("Created Container: {0}\n", containers[containerId]!.Id);
             return container;
         }
         // </CreateContainerAsync>
@@ -73,8 +91,8 @@ namespace Knowledge.Model
             // Read the current throughput
             try
             {
-                Container container = this.containers[containerId];
-                int? throughput = await container.ReadThroughputAsync();
+                Container? container = containers[containerId];
+                int? throughput = await container!.ReadThroughputAsync();
                 if (throughput.HasValue)
                 {
                     Console.WriteLine("Current provisioned throughput : {0}\n", throughput.Value);
@@ -95,25 +113,25 @@ namespace Knowledge.Model
 
         private async Task<bool> AddInitialData()
         {
-            List<CategoryData> list = new List<CategoryData>();
+            List<CategoryData> list = [];
             try
             {
-                var category = new Category(this.Configuration);
-                using (StreamReader r = new StreamReader("InitialData/categories-questions.json"))
+                //var category = new Category(this);
+                var categoyService = new CategoryService(this);
+                using StreamReader r = new("InitialData/categories-questions.json");
+                string json = r.ReadToEnd();
+                CategoriesData? categoriesData = JsonConvert.DeserializeObject<CategoriesData>(json);
+                foreach (var categoryData in categoriesData!.Categories)
                 {
-                    string json = r.ReadToEnd();
-                    CategoriesData categoriesData = JsonConvert.DeserializeObject<CategoriesData>(json);
-                    foreach (var categoryData in categoriesData!.Categories)
-                    {
-                        categoryData.parentCategory = null;
-                        list.Add(categoryData);
-                        await category.AddCategory(categoryData);
-                    }
+                    categoryData.parentCategory = null;
+                    list.Add(categoryData);
+                    await categoyService.AddCategory(categoryData);
                 }
                 return true;
             }
             catch (Exception ex)
             {
+                Console.WriteLine(ex.Message);
                 return false;
             }
         }
@@ -121,42 +139,43 @@ namespace Knowledge.Model
 
         public async Task<Container> GetContainer(string containerId)
         {
-            if (this.database == null)
+            //if (this.database == null)
+            //{
+            //    bool created = await this.CreateDatabaseIfNotExistsAsync();
+            //    if (created)
+            //    {
+            //        Console.WriteLine("Created Database: {0}\n", this.database.Id);
+            //        await this.AddInitialData();
+            //    }
+            //}
+            Container? container;
+            if (containers.ContainsKey(containerId))
             {
-                bool created = await this.CreateDatabaseAsync();
-                if (created)
-                {
-                    await this.AddInitialData();
-                }
-            }
-            Container? container = null;
-            if (this.containers.ContainsKey(containerId))
-            {
-                container = this.containers[containerId];
+                container = containers[containerId];
             }
             else 
             {
-                container = await this.CreateContainerAsync(containerId);
-                //await this.ScaleContainerAsync();
+                container = await CreateContainerAsync(containerId);
+                //await ScaleContainerAsync();
             }
-            return container;
+            return container!;
         }
 
         // <GetStartedAsync>
         /// <summary>
         /// Entry point to call methods that operate on Azure Cosmos DB resources in this sample
         /// </summary>
-        public async Task GetStartedAsync()
-        {
-            // Create a new instance of the Cosmos Client
-            this.cosmosClient = new CosmosClient(
-                CosmosDBAccountUri,
-                CosmosDBAccountPrimaryKey,
-                new CosmosClientOptions()
-                {
-                    ApplicationName = "KnowledgeCosmos"
-                }
-            );
+        //public async Task GetStartedAsync()
+        //{
+            //// Create a new instance of the Cosmos Client
+            //this.cosmosClient = new CosmosClient(
+            //    CosmosDBAccountUri,
+            //    CosmosDBAccountPrimaryKey,
+            //    new CosmosClientOptions()
+            //    {
+            //        ApplicationName = "KnowledgeCosmos"
+            //    }
+            //);
 
             //await this.CreateDatabaseAsync();
             //await this.CreateContainerAsync();
@@ -166,8 +185,33 @@ namespace Knowledge.Model
             //await this.ReplaceFamilyItemAsync();
             // await this.DeleteFamilyItemAsync();
             // await this.DeleteDatabaseAndCleanupAsync();
+        //}
+
+
+        public void Dispose()
+        {
+            foreach (var container in containers) {
+                containers[container.Key] = null;
+            }   
+            containers.Clear();
+
+            database = null;
+            if (cosmosClient != null) {
+                cosmosClient.Dispose();
+                cosmosClient = null;
+            }
+
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
-            
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+            }
+        }
+
         // </GetStartedDemoAsync>
 
     }

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using System.Configuration;
 using Newtonsoft.Json;
 using Microsoft.Azure.Cosmos.Serialization.HybridRow.Schemas;
+using Knowledge.Services;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -15,10 +16,12 @@ namespace Knowledge.Controllers
     public class QuestionController : ControllerBase
     {
         private readonly IConfiguration Configuration;
-        private readonly string containerId = "Questions";
+        DbService dbService { get; set; }
 
         public QuestionController(IConfiguration configuration)
         {
+            dbService = new DbService(configuration);
+            dbService.Initialize.Wait();
             Configuration = configuration;
         }
 
@@ -28,9 +31,8 @@ namespace Knowledge.Controllers
         {
             try
             {
-                Question.Db = new Db(this.Configuration);
-                // var container = await Db.GetContainer(this.containerId);
-                QuestionsMore questionsMore = await Question.GetQuestions(parentCategory, startCursor, pageSize, includeQuestionId);
+                var questionService = new QuestionService(dbService);
+                QuestionsMore questionsMore = await questionService.GetQuestions(parentCategory, startCursor, pageSize, includeQuestionId);
                 var categoryDto = new CategoryDto(questionsMore);
                 return Ok(categoryDto);
             }
@@ -45,13 +47,14 @@ namespace Knowledge.Controllers
         {
             try
             {
-                Question.Db = new Db(this.Configuration);
-                // var container = await Db.GetContainer(this.containerId);
-                Question question = await Question.GetQuestion(parentCategory, id);
-                if (question != null)
+
+                var questionService = new QuestionService(dbService);
+                Question q = await questionService.GetQuestion(parentCategory, id);
+                if (q != null)
                 {
-                    return Ok(new QuestionDto(question));
+                    return Ok(new QuestionDto(q));
                 }
+                    
                 return NotFound();
             }
             catch (Exception ex)

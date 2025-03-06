@@ -8,28 +8,28 @@ namespace Knowledge.Model
     public class QuestionDto
     {
         // public string PartitionKey { get; set; }
-        [JsonProperty(PropertyName = "id")]
+        [JsonProperty(PropertyName = "Id")]
         public string Id { get; set; }
-        public string title { get; set; }
+        public string Title { get; set; }
         // public string? parentCategory { get; set; }
-        public List<long>? assignedAnswers { get; set; }
-        public int source { get; set; }
-        public int status { get; set; }
+        public List<long>? AssignedAnswers { get; set; }
+        public int Source { get; set; }
+        public int Status { get; set; }
 
-        public WhoWhen created { get; set; }
-        public WhoWhen? modified { get; set; }
-        public WhoWhen? archived { get; set; }
+        public WhoWhen Created { get; set; }
+        public WhoWhen? Modified { get; set; }
+        public WhoWhen? Archived { get; set; }
 
         public QuestionDto(Question question)
         {
             this.Id = question.Id;
-            this.title = question.title;
+            this.Title = question.Title;
             //this.parentCategory = question.parentCategory;
-            this.source = question.source;
-            this.status = question.status;
-            this.created = question.created;
-            this.modified = question.modified;
-            this.archived = question.archived;
+            this.Source = question.Source;
+            this.Status = question.Status;
+            this.Created = question.Created;
+            this.Modified = question.Modified;
+            this.Archived = question.Archived;
             //this.PartitionKey = question.PartitionKey;  
         }
 

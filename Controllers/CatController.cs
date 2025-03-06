@@ -6,6 +6,7 @@ using System.Configuration;
 using Newtonsoft.Json;
 using Microsoft.Azure.Cosmos.Serialization.HybridRow.Schemas;
 using System.ComponentModel.DataAnnotations;
+using Knowledge.Services;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -16,38 +17,46 @@ namespace Knowledge.Controllers
     public class CatController : ControllerBase
     {
         private readonly IConfiguration Configuration;
-        private readonly string containerId = "Questions";
+        DbService dbService { get; set; }
 
         public CatController(IConfiguration configuration)
         {
+            dbService = new DbService(configuration);
+            dbService.Initialize.Wait();
             Configuration = configuration;
         }
 
     
-        [HttpGet("{partitionKey}/{id}/{upTheTree}")]
-        public async Task<IActionResult> GetCategories(string partitionKey, string id, bool upTheTree)
+        [HttpGet("{partitionKey}/{id}")]
+        public async Task<IActionResult> GetCatsUpTheTree(string partitionKey, string id)
         {
             try
             {
-                Category.Db = new Db(this.Configuration);
-                // var container = await Db.GetContainer(this.containerId);
-                List<CategoryDto> list = new List<CategoryDto>();
-                Category category = await Category.GetCategory(partitionKey, id, false, 0, null);
-                if (category != null)
-                {
-                    list.Add(new CategoryDto(category));
-                    var parentCategory = category.parentCategory;
-                    while (parentCategory != null)
+                //using (var db = new Db(this.Configuration))
+                //{
+                    //await db.Initialize;
+                    //var category = new Category(db); 
+                    //Category cat = await category.GetCategory(partitionKey, id, false, 0, null);
+                    var categoryService = new CategoryService(dbService);
+                    Category cat = await categoryService.GetCategory(partitionKey, id, false, 0, null);
+
+                    if (cat != null)
                     {
-                        Category c = await Category.GetCategory(partitionKey, parentCategory, false, 0, null);
-                        if (c != null)
+                        List<CategoryDto> list = [];
+                        list.Add(new CategoryDto(cat));
+                        var parentCategory = cat.ParentCategory;
+                        while (parentCategory != null)
                         {
-                            list.Add(new CategoryDto(c));
-                            parentCategory = c.parentCategory;
+                            Category c = await categoryService.GetCategory(partitionKey, parentCategory, false, 0, null);
+                            if (c != null)
+                            {
+                                list.Add(new CategoryDto(c));
+                                parentCategory = c.ParentCategory;
+                            }
                         }
+                        return Ok(list);
                     }
-                    return Ok(list);
-                }
+                //}
                 return NotFound();
             }
             catch (Exception ex)
@@ -57,19 +66,24 @@ namespace Knowledge.Controllers
         }
 
 
-        [HttpGet("{partitionKey}/{id}")]
-        public async Task<IActionResult> GetCategory(string partitionKey, string id)
+        [HttpGet("{partitionKey}/{id}/{hidrate}")]
+        public async Task<IActionResult> GetCategoryHidrated(string partitionKey, string id, bool hidrate)
         {
+            // hidrate collections except questions
             try
             {
-                // TODO 1. ovo 2. what does  /partitionKey mean?
-                Category.Db = new Db(this.Configuration);
-                // var container = await Db.GetContainer(this.containerId);
-                Category category = await Category.GetCategory(partitionKey, id, false, 0, null);
-                if (category != null)
+                // TODO what does  /partitionKey mean?
+                //using (var db = new Db(this.Configuration))
+                //{
+                    //await db.Initialize;
+                    //var category = new Category(db);
+                var categoryService = new CategoryService(dbService);
+                Category cat = await categoryService.GetCategory(partitionKey, id, hidrate, 0, null);
+                if (cat != null)
                 {
-                    return Ok(new CategoryDto(category));
+                    return Ok(new CategoryDto(cat));
                 }
+                //}
                 return NotFound();
             }
             catch (Exception ex)
