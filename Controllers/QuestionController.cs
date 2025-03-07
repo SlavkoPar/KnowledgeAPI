@@ -63,6 +63,27 @@ namespace Knowledge.Controllers
             }
         }
 
+        [HttpGet("{filter}/{count}/{nesto}")]
+        public async Task<IActionResult> GetQuests(string filter, int count, string nesto)
+        {
+            try
+            {
+                var words = filter //.ToLower()
+                                .Replace("?", "")
+                                .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                                .Where(w => w.Length > 2)
+                                .ToList();
+                var questionService = new QuestionService(dbService);
+                List<QuestDto> quests = await questionService.GetQuests(words, count);
+                return Ok(quests);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+
         // POST api/<FamilyController>
         [HttpPost]
         public void Post([FromBody]string value)

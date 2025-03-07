@@ -31,22 +31,23 @@ namespace Knowledge.Model
   
         public Question(QuestionData questionData)
         {
-            this.Type = "question";
-            this.Id = Guid.NewGuid().ToString();
-            this.PartitionKey = questionData.parentCategory!;
-            this.Title = questionData.title;
-            //this.words =
+            string s = DateTime.Now.Ticks.ToString();
+            Type = "question";
+            Id = s.Substring(s.Length-10);// Guid.NewGuid().ToString();
+            PartitionKey = questionData.parentCategory!;
+            Title = questionData.title;
+            //words =
             //    categoryData.title
             //        .ToLower()
             //        .Replace("?", "")
             //        .Split(' ', StringSplitOptions.RemoveEmptyEntries|StringSplitOptions.TrimEntries)
             //        .Where(w => w.Length > 1)
             //        .ToList();
-            this.ParentCategory = questionData.parentCategory;
-            this.AssignedAnswers = [];
-            this.Created = new WhoWhen("Admin");
-            this.Modified = null;
-            this.Archived = null;
+            ParentCategory = questionData.parentCategory;
+            AssignedAnswers = [];
+            Created = new WhoWhen("Admin");
+            Modified = null;
+            Archived = null;
         }
 
         public void Dispose()

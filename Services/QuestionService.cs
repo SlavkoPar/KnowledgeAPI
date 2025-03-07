@@ -1,4 +1,5 @@
-﻿using System.Drawing.Printing;
+﻿using System.Collections.Generic;
+using System.Drawing.Printing;
 using System.Net;
 using Knowledge.Model;
 using Microsoft.Azure.Cosmos;
@@ -148,6 +149,60 @@ namespace Knowledge.Services
             }
             return new QuestionsMore(questions, hasMore);
         }
+
+        public async Task<List<QuestDto>> GetQuests(List<string> words, int count)
+        {
+            var myContainer = await container();
+            try
+            {
+                //SELECT c.Title, c.id 
+                //    FROM c 
+                //    WHERE c.Type = 'question' AND IS_NULL(c.Archived) AND c.ParentCategory = 'DOMAIN' AND CONTAINS(c.Title, "500") 
+                //    ORDER BY c.Title OFFSET 0 LIMIT 30
+                var sqlQuery = $"SELECT c.ParentCategory, c.Title, c.id FROM c WHERE c.Type = 'question' AND IS_NULL(c.Archived) AND ";
+                if (words.Count == 1)
+                {
+                    sqlQuery += $" CONTAINS(c.Title, \"{words[0]}\", true) ";
+                }
+                else
+                {
+                    sqlQuery += "(";
+                    for (var i=0; i < words.Count; i++)
+                    {
+                        if (i > 0)
+                            sqlQuery += " OR ";
+                        sqlQuery += $" CONTAINS(c.Title, \"{words[i]}\", true) ";
+                    }
+                    sqlQuery += ")";
+
+                }
+                sqlQuery += $" ORDER BY c.Title OFFSET 0 LIMIT {count}";
+
+
+                List<QuestDto> quests = [];
+                QueryDefinition queryDefinition = new QueryDefinition(sqlQuery);
+                using (FeedIterator<Question> queryResultSetIterator = 
+                    myContainer!.GetItemQueryIterator<Question>(queryDefinition))
+                {
+                    while (queryResultSetIterator.HasMoreResults)
+                    {
+                        FeedResponse<Question> currentResultSet = await queryResultSetIterator.ReadNextAsync();
+                        foreach (Question question in currentResultSet)
+                        {
+                            quests.Add(new QuestDto(question));
+                        }
+                    }
+                }
+                return quests;
+            }
+            catch (Exception ex)
+            {
+                // Note that after creating the item, we can access the body of the item with the Resource property off the ItemResponse. We can also access the RequestCharge property to see the amount of RUs consumed on this request.
+                Console.WriteLine(ex.Message);
+            }
+            return [];
+        }
+
 
         public void Dispose()
         {

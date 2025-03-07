@@ -44,23 +44,27 @@ namespace Knowledge.Services
 
         private async Task CreateInstanceAsync()
         {
-            // await Task.Delay(10);
-            bool created = await CreateDatabaseIfNotExistsAsync();
-            if (created)
-            {
-                Console.WriteLine("Created Database: {0}\n", database!.Id);
-                await AddInitialData();
-            }
+            await Task.Delay(1);
+            //bool created = await CreateDatabaseIfNotExistsAsync();
+            //if (created)
+            //{
+            //    Console.WriteLine("Created Database: {0}\n", database!.Id);
+            //    await AddInitialData();
+            //}
             Initiated = true;
         }
 
 
-        private async Task<bool> CreateDatabaseIfNotExistsAsync()
+        public async Task<bool> CreateDatabaseIfNotExistsAsync()
         {
             // Create a new database
             DatabaseResponse response = await cosmosClient!.CreateDatabaseIfNotExistsAsync(databaseId);
             database = response.Database;
-            return response.StatusCode == HttpStatusCode.Created;
+            bool created = response.StatusCode == HttpStatusCode.Created;
+            if (created) {
+                await AddInitialData();
+            }
+            return created;
         }
 
         // <CreateContainerAsync>
@@ -139,15 +143,17 @@ namespace Knowledge.Services
 
         public async Task<Container> GetContainer(string containerId)
         {
-            //if (this.database == null)
-            //{
-            //    bool created = await this.CreateDatabaseIfNotExistsAsync();
-            //    if (created)
-            //    {
-            //        Console.WriteLine("Created Database: {0}\n", this.database.Id);
-            //        await this.AddInitialData();
-            //    }
-            //}
+            if (database == null)
+            {
+                database = cosmosClient!.GetDatabase(databaseId);
+                await database.ReadAsync(); // TODO treba li ovo?
+                //    bool created = await this.CreateDatabaseIfNotExistsAsync();
+                //    if (created)
+                //    {
+                //        Console.WriteLine("Created Database: {0}\n", this.database.Id);
+                //        await this.AddInitialData();
+                //    }
+            }
             Container? container;
             if (containers.ContainsKey(containerId))
             {
