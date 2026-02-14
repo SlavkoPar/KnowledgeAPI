@@ -1,0 +1,33 @@
+{
+  "dependencies": {
+    "cosmosdb1": {
+      "restored": true,
+      "restoreTime": "2026-02-13T09:48:43.7044234Z"
+    },
+    "identityapp1": {
+      "restored": true,
+      "restoreTime": "2026-02-13T09:03:59.4765163Z"
+    },
+    "secrets1": {
+      "restored": true,
+      "restoreTime": "2026-02-13T09:48:27.0549524Z"
+    }
+  },
+  "parameters": {
+    "cosmosdb1.subscriptionId": {
+      "Name": "cosmosdb1.subscriptionId",
+      "Type": "subscription",
+      "Value": "20faa60c-bedd-446c-911b-30a51ebf37ad"
+    },
+    "cosmosdb1.serviceConnectorResourceGroupName": {
+      "Name": "cosmosdb1.serviceConnectorResourceGroupName",
+      "Type": "resourceGroup",
+      "Value": "DefaultResourceGroup-WEU"
+    },
+    "cosmosdb1.resourceGroupName": {
+      "Name": "cosmosdb1.resourceGroupName",
+      "Type": "resourceGroup",
+      "Value": "DefaultResourceGroup-WEU"
+    }
+  }
+}
