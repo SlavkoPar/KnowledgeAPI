@@ -1,19 +1,12 @@
 ﻿using Azure;
-using Azure.Search.Documents;
 using Azure.Search.Documents.Indexes;
-using Azure.Search.Documents.Models;
 using Knowledge.Services;
-using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.Azure.Cosmos;
 using KnowledgeAPI.A.Answers.Model;
 using KnowledgeAPI.A.Groups;
 using KnowledgeAPI.A.Groups.Model;
 using KnowledgeAPI.Common;
-using KnowledgeAPI.Q.Categories;
-using KnowledgeAPI.Q.Categories.Model;
-using KnowledgeAPI.Q.Questions.Model;
+using Microsoft.Azure.Cosmos;
 using Newtonsoft.Json;
-using System.Collections.ObjectModel;
 using System.Net;
 
 
@@ -30,7 +23,7 @@ namespace KnowledgeAPI.A.Answers
         private string _workspace = null;
 
 
-     
+
         readonly string _rowColumns = @"'', '', c.TopId, c.id, c.ParentId, 
                             c.Title, c.Vectors, c.NumOfAssignedAnswers
                             FROM c ";
@@ -45,7 +38,7 @@ namespace KnowledgeAPI.A.Answers
 
         public async Task<Container> container()
         {
-           // ThroughputProperties throughputProperties = ThroughputProperties.CreateAutoscaleThroughput(1000);
+            // ThroughputProperties throughputProperties = ThroughputProperties.CreateAutoscaleThroughput(1000);
 
             // Define new container properties including the vector indexing policy
             ContainerProperties properties = new ContainerProperties(id: containerId, partitionKeyPath: "/partitionKey")
@@ -95,7 +88,7 @@ namespace KnowledgeAPI.A.Answers
             // this._openAIEmbeddingService = Db.openAIEmbeddingService;
             _workspace = workspace;
         }
-                 
+
         public async Task<HttpStatusCode> CheckDuplicate(string ws, string? Title, string? Id = null)
         {
             var sqlQuery = Title != null
@@ -209,6 +202,20 @@ namespace KnowledgeAPI.A.Answers
             return new AnswerEx(null, msg);
         }
 
+        public async Task<int> GetAnswerCount(string workspace)
+        {
+            var sql = $"SELECT value count(1) FROM c WHERE c.Type = 'answer' AND c.Workspace='{workspace}'";
+            var myContainer = await container();
+            int count = 0;
+            var query = myContainer.GetItemQueryIterator<int>(new QueryDefinition(sql));
+            while (query.HasMoreResults)
+            {
+                FeedResponse<int> response = await query.ReadNextAsync();
+                count += response.Resource.FirstOrDefault();
+            }
+            return count;
+        }
+
         public async Task<int> CountNumOfAnswers(GroupKey groupKey)
         {
             var (workspace, topId, partitionKey, id, _) = groupKey;
@@ -303,7 +310,7 @@ namespace KnowledgeAPI.A.Answers
                     await myContainer.ReadItemAsync<Answer>(
                         id,
                         new PartitionKey(partitionKey!)
-                    );  
+                    );
                 Answer answer = aResponse.Resource;
 
                 var doUpdate = true;
@@ -331,7 +338,8 @@ namespace KnowledgeAPI.A.Answers
                     answer.ParentId = newParentId;
                     // answer.PartitionKey = newParentId!;
 
-                    if (modified != null) {
+                    if (modified != null)
+                    {
                         answer.Modified = new WhoWhen(modified.NickName);
                     }
 
@@ -379,7 +387,7 @@ namespace KnowledgeAPI.A.Answers
             catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
             {
                 var msg = $"Answer Id: \"{answerDto.Id}\" Not Found in database.";
-                Console.WriteLine(msg); 
+                Console.WriteLine(msg);
                 return new AnswerEx(msg);
             }
             catch (Exception ex)
@@ -421,7 +429,7 @@ namespace KnowledgeAPI.A.Answers
             return new AnswerEx(null, "Server Problem Update");
         }
 
-         
+
         public async Task<string> ArchiveAnswer(Container? cntr, Answer answer)
         {
             var myContainer = cntr != null ? cntr : await container();
@@ -433,7 +441,7 @@ namespace KnowledgeAPI.A.Answers
             try
             {
                 // Read the item to see if it exists.  
-                ItemResponse<Answer> aResponse = 
+                ItemResponse<Answer> aResponse =
                     await myContainer.ReadItemAsync<Answer>(
                         id,
                         new PartitionKey(partitionKey)
@@ -473,7 +481,7 @@ namespace KnowledgeAPI.A.Answers
             catch (Exception ex)
             {
                 // Note that after creating the item, we can access the body of the item with the Resource property off the ItemResponse. We can also access the RequestCharge property to see the amount of RUs consumed on this request.
-                message = ex.Message;   
+                message = ex.Message;
                 Console.WriteLine(ex.Message);
             }
             return message;
@@ -652,7 +660,7 @@ namespace KnowledgeAPI.A.Answers
                 else
                 {
                     sqlQuery += "(";
-                    for (var i=0; i < words.Count; i++)
+                    for (var i = 0; i < words.Count; i++)
                     {
                         if (i > 0)
                             sqlQuery += " OR ";
@@ -661,10 +669,10 @@ namespace KnowledgeAPI.A.Answers
                     sqlQuery += ")";
                 }
                 sqlQuery += $" ORDER BY c.Title OFFSET 0 LIMIT {count}";
-                Console.WriteLine(sqlQuery);   
+                Console.WriteLine(sqlQuery);
 
-                QueryDefinition queryDefinition = new QueryDefinition(sqlQuery);    
-                using (FeedIterator<AnswerRow> queryResultSetIterator = 
+                QueryDefinition queryDefinition = new QueryDefinition(sqlQuery);
+                using (FeedIterator<AnswerRow> queryResultSetIterator =
                     myContainer!.GetItemQueryIterator<AnswerRow>(queryDefinition))
                 {
                     while (queryResultSetIterator.HasMoreResults)
@@ -725,7 +733,7 @@ return recipes;
 
 
 
-        public async Task<Answer> SetAnswerTitles(Answer answer, 
+        public async Task<Answer> SetAnswerTitles(Answer answer,
             GroupService groupService, AnswerService answerService)
         {
             var (workspace, topId, partitionKey, id, title, parentId, type, source, status) = answer;

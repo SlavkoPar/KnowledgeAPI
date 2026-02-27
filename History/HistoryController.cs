@@ -1,17 +1,9 @@
 ﻿using Knowledge.Services;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Cosmos;
-using Microsoft.Extensions.Configuration;
-using KnowledgeAPI.A.Answers;
 using KnowledgeAPI.Hist.Model;
-using KnowledgeAPI.Q.Categories;
-using KnowledgeAPI.Q.Categories.Model;
 using KnowledgeAPI.Q.Questions;
 using KnowledgeAPI.Q.Questions.Model;
+using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
-using System.Collections.Generic;
-using System.Configuration;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -19,7 +11,7 @@ namespace KnowledgeAPI.Hist
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    //[Authorize]
 
     public class HistoryController : ControllerBase
     {
@@ -132,7 +124,7 @@ namespace KnowledgeAPI.Hist
 
 
         [HttpPost]
-        [Authorize]
+        //[Authorize]
         public async Task<IActionResult> Post([FromBody] HistoryDto historyDto)
         {
             try

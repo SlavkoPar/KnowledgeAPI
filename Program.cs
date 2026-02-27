@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Identity.Web;
 
-var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+//var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +18,17 @@ builder.Services
     .AddJsonOptions(options => options.JsonSerializerOptions.PropertyNamingPolicy = null);
 
 builder.Services.AddEndpointsApiExplorer();
+//builder.Services.AddSwaggerGen();
+
+//builder.Services.ConfigureSwaggerGen(setup =>
+//{
+//    setup.SwaggerDoc("v1", new Microsoft.OpenApi.OpenApiInfo
+//    {
+//        Title = "Weather Forecasts",
+//        Version = "v1"
+//    });
+//});
+
 
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -33,34 +44,32 @@ builder.Services.AddCors(o => o.AddPolicy("default", builder =>
 builder.Services.AddMemoryCache();
 builder.Services.AddResponseCaching();
 
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy(name: MyAllowSpecificOrigins,
-       policy =>
-       {
-           policy.WithOrigins("http://localhost:3000")
-              .AllowAnyHeader()
-              .AllowAnyMethod();
-       }
-    );
-});
+//builder.Services.AddCors(options =>
+//{
+//    options.AddPolicy(name: MyAllowSpecificOrigins,
+//       policy =>
+//       {
+//           policy.WithOrigins("http://localhost:3000")
+//              .AllowAnyHeader()
+//              .AllowAnyMethod();
+//       }
+//    );
+//});
 
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+//app.UseSwagger();
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+//if (app.Environment.IsDevelopment())
+//{
+//    app.UseSwagger();
+//    app.UseSwaggerUI();
+//}
+
 
 app.UseCors("default"); // UseCors must be called before UseResponseCaching 
 //app.UseCors(MyAllowSpecificOrigins);

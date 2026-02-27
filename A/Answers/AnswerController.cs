@@ -25,9 +25,25 @@ namespace KnowledgeAPI.A.Answers
             Configuration = configuration;
         }
 
+        [HttpGet("{workspace}")]
+        public async Task<IActionResult> GetAnswerCount(string workspace)
+        {
+            string message = string.Empty;
+            try
+            {
+                var answerService = new AnswerService(dbService, workspace);
+                int count = await answerService.GetAnswerCount(workspace);
+                return Ok(count);
+            }
+            catch (Exception ex)
+            {
+                return (BadRequest(ex.Message));
+            }
+        }
+
 
         [HttpGet("{workspace}/{topId}/{parentId}/{startCursor}/{pageSize}/{includeAnswerId}")]
-        [ResponseCache(Duration = 10, Location = ResponseCacheLocation.Any, VaryByQueryKeys = new[] { "workspace", "topId", "parentId", "startCursor" })]
+        // [ResponseCache(Duration = 5, Location = ResponseCacheLocation.Any, VaryByQueryKeys = new[] { "workspace", "topId", "parentId", "startCursor" })]
         public async Task<IActionResult> GetAnswers(string workspace, string topId, string parentId,
             int startCursor, int pageSize, string? includeAnswerId)
         {
@@ -54,7 +70,6 @@ namespace KnowledgeAPI.A.Answers
                 message = ex.Message;
             }
             return Ok(new GroupDtoEx(message));
-
         }
 
         [HttpGet]

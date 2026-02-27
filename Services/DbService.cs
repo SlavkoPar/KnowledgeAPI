@@ -1,28 +1,30 @@
-﻿
-
-using Microsoft.AspNetCore.Mvc.TagHelpers;
-using Microsoft.Azure.Cosmos;
-using Microsoft.VisualBasic;
-using KnowledgeAPI.A;
-using KnowledgeAPI.A.Answers.Model;
-using KnowledgeAPI.A.Groups;
+﻿using KnowledgeAPI.A.Groups;
 using KnowledgeAPI.A.Groups.Model;
-using KnowledgeAPI.Q;
 using KnowledgeAPI.Q.Categories;
 using KnowledgeAPI.Q.Categories.Model;
+using Microsoft.Azure.Cosmos;
 using Newtonsoft.Json;
 using System.Net;
-using System.Text.RegularExpressions;
 
 namespace Knowledge.Services
 {
+
+    //public class CosmosService
+    //{
+    //    private static readonly CosmosClient client = new CosmosClient("YourConnectionString");
+    //    private static readonly Container container = client.GetContainer("DatabaseId", "ContainerId");
+    //    public async Task<MyData> GetDataAsync(string id, string partitionKey)
+    //    {
+    //        return await container.ReadItemAsync<MyData>(id, new PartitionKey(partitionKey));
+    //    }
+    //}
     public class DbService : IDisposable
     {
         private readonly IConfiguration Configuration;
-        private readonly string CosmosDBAccountUri;
-        private readonly string CosmosDBAccountPrimaryKey;
+        private string CosmosDBAccountUri;
+        private string CosmosDBAccountPrimaryKey;
 
-        private CosmosClient? cosmosClient = null;
+        private static CosmosClient? _cosmosClient = null;
         private Database? _database = null;
         readonly Dictionary<string, Container?> containers = [];
 
@@ -40,15 +42,18 @@ namespace Knowledge.Services
             CosmosDBAccountUri = configuration["CosmosDBAccountUri"];
             CosmosDBAccountPrimaryKey = configuration["CosmosDBAccountPrimaryKey"];
 
-            cosmosClient = new CosmosClient(
-                CosmosDBAccountUri,
-                CosmosDBAccountPrimaryKey,
-                new CosmosClientOptions()
-                {
-                    ApplicationName = "KnowledgeAPI",
-                    AllowBulkExecution = true
-                }
-            );
+            if (_cosmosClient == null)
+            {
+                _cosmosClient = new CosmosClient(
+                    CosmosDBAccountUri,
+                    CosmosDBAccountPrimaryKey,
+                    new CosmosClientOptions()
+                    {
+                        ApplicationName = "KnowledgeAPI",
+                        AllowBulkExecution = true
+                    }
+                );
+            }
 
             Initialize = CreateInstanceAsync();
             openAIEmbeddingService = new OpenAIService(configuration.GetSection("MySearch"));
@@ -71,7 +76,7 @@ namespace Knowledge.Services
         public async Task<string> CreateDatabaseIfNotExistsAsync()
         {
             // Create a new database
-            DatabaseResponse response = await cosmosClient!.CreateDatabaseIfNotExistsAsync(databaseId);
+            DatabaseResponse response = await _cosmosClient!.CreateDatabaseIfNotExistsAsync(databaseId);
             _database = response.Database;
             bool created = response.StatusCode == HttpStatusCode.Created;
             if (created)
@@ -155,7 +160,7 @@ namespace Knowledge.Services
             string msg = string.Empty;
             try
             {
-                DatabaseResponse response = await cosmosClient!.CreateDatabaseIfNotExistsAsync(databaseId);
+                DatabaseResponse response = await _cosmosClient!.CreateDatabaseIfNotExistsAsync(databaseId);
                 _database = response.Database;
                 foreach (var ws in workspaces)
                 {
@@ -175,7 +180,7 @@ namespace Knowledge.Services
                         await Task.Delay(1000);
                         Thread.Sleep(1000);
                     }
-                    
+
                 }
             }
             catch (Exception ex)
@@ -191,7 +196,7 @@ namespace Knowledge.Services
             string msg = string.Empty;
             try
             {
-                DatabaseResponse response = await cosmosClient!.CreateDatabaseIfNotExistsAsync(databaseId);
+                DatabaseResponse response = await _cosmosClient!.CreateDatabaseIfNotExistsAsync(databaseId);
                 _database = response.Database;
                 foreach (var ws in workspaces)
                 {
@@ -223,11 +228,11 @@ namespace Knowledge.Services
             return msg;
         }
 
-        public async Task<Container> GetContainer(string containerId, ContainerProperties? properties=null, ThroughputProperties? throughputProperties=null)
+        public async Task<Container> GetContainer(string containerId, ContainerProperties? properties = null, ThroughputProperties? throughputProperties = null)
         {
             if (_database == null)
             {
-                _database = cosmosClient!.GetDatabase(databaseId);
+                _database = _cosmosClient!.GetDatabase(databaseId);
                 await _database.ReadAsync(); // TODO treba li ovo?
                 //    bool created = await this.CreateDatabaseIfNotExistsAsync();
                 //    if (created)
@@ -241,7 +246,7 @@ namespace Knowledge.Services
             {
                 container = containers[containerId];
             }
-            else 
+            else
             {
                 container = await CreateContainerAsync(containerId, properties, throughputProperties);
                 //await ScaleContainerAsync();
@@ -255,38 +260,40 @@ namespace Knowledge.Services
         /// </summary>
         //public async Task GetStartedAsync()
         //{
-            //// Create a new instance of the Cosmos Client
-            //this.cosmosClient = new CosmosClient(
-            //    CosmosDBAccountUri,
-            //    CosmosDBAccountPrimaryKey,
-            //    new CosmosClientOptions()
-            //    {
-            //        ApplicationName = "KnowledgeCosmos"
-            //    }
-            //);
+        //// Create a new instance of the Cosmos Client
+        //this.cosmosClient = new CosmosClient(
+        //    CosmosDBAccountUri,
+        //    CosmosDBAccountPrimaryKey,
+        //    new CosmosClientOptions()
+        //    {
+        //        ApplicationName = "KnowledgeCosmos"
+        //    }
+        //);
 
-            //await this.CreateDatabaseAsync();
-            //await this.CreateContainerAsync();
-            //await this.ScaleContainerAsync();
-            //await this.AddItemsToContainerAsync();
-            //await this.QueryItemsAsync();
-            //await this.ReplaceFamilyItemAsync();
-            // await this.DeleteFamilyItemAsync();
-            // await this.DeleteDatabaseAndCleanupAsync();
+        //await this.CreateDatabaseAsync();
+        //await this.CreateContainerAsync();
+        //await this.ScaleContainerAsync();
+        //await this.AddItemsToContainerAsync();
+        //await this.QueryItemsAsync();
+        //await this.ReplaceFamilyItemAsync();
+        // await this.DeleteFamilyItemAsync();
+        // await this.DeleteDatabaseAndCleanupAsync();
         //}
 
 
         public void Dispose()
         {
-            foreach (var container in containers) {
+            foreach (var container in containers)
+            {
                 containers[container.Key] = null;
-            }   
+            }
             containers.Clear();
 
             _database = null;
-            if (cosmosClient != null) {
-                cosmosClient.Dispose();
-                cosmosClient = null;
+            if (_cosmosClient != null)
+            {
+                _cosmosClient.Dispose();
+                _cosmosClient = null;
             }
 
             Dispose(true);
