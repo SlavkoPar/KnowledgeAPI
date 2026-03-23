@@ -1,6 +1,6 @@
-﻿using KnowledgeAPI.Common;
+﻿using Azure.Search.Documents.Indexes;
+using KnowledgeAPI.Common;
 using Newtonsoft.Json;
-using Azure.Search.Documents.Indexes;
 
 namespace KnowledgeAPI.A.Answers.Model
 {
@@ -12,7 +12,7 @@ namespace KnowledgeAPI.A.Answers.Model
         public string Id { get; set; }
         public string? ParentId { get; set; }
 
-        //[SearchableField(IsFilterable = true, IsSortable = true, IsFacetable = true)]
+        [SearchableField(IsFilterable = true, IsSortable = true, IsFacetable = true)]
         public string Title { get; set; }
 
         //[VectorSearchField()]
@@ -23,7 +23,7 @@ namespace KnowledgeAPI.A.Answers.Model
         public int? NumOfAssignedAnswers { get; set; }
 
         [JsonProperty(PropertyName = "Included", NullValueHandling = NullValueHandling.Ignore)]
-        public bool? Included {  get; set; }
+        public bool? Included { get; set; }
 
         public AnswerRow()
             : base(new WhoWhen("Admin"), null)
@@ -53,7 +53,8 @@ namespace KnowledgeAPI.A.Answers.Model
             TopId = dto.TopId;
             //string s = DateTime.Now.Ticks.ToString();
             //Id = s.Substring(s.Length - 10);// Guid.NewGuid().ToString();
-            if (dto.Id.Equals("generateId")) {
+            if (dto.Id.Equals("generateId"))
+            {
                 string s = DateTime.Now.Ticks.ToString();
                 dto.Id = s.Substring(s.Length - 10);// Guid.NewGuid().ToString();
             }
@@ -100,7 +101,7 @@ namespace KnowledgeAPI.A.Answers.Model
         public int Status { get; set; }
 
         public Answer()
-            : base()   
+            : base()
         {
             Type = "answer";
             GroupTitle = null;
@@ -114,8 +115,8 @@ namespace KnowledgeAPI.A.Answers.Model
         {
             PartitionKey = answerData.Workspace + "/" + answerData.TopId;
             GroupTitle = null;
-                       
-            
+
+
             Source = 0;
             Status = 0;
         }
@@ -129,7 +130,7 @@ namespace KnowledgeAPI.A.Answers.Model
             //AssignedAnswers = answerDto.AssignedAnswers!;
             //NumOfAssignedAnswers = answerDto.NumOfAssignedAnswers;
             Source = answerDto.Source;
-            Status = answerDto.Status;    
+            Status = answerDto.Status;
         }
 
         public Answer(AnswerRow answerRow)

@@ -1,17 +1,12 @@
-﻿using Azure;
-using Azure.Search.Documents;
-using Azure.Search.Documents.Indexes;
-using Azure.Search.Documents.Models;
-using Knowledge.Services;
-using Microsoft.Azure.Cosmos;
+﻿using Knowledge.Services;
 using KnowledgeAPI.A.Answers;
 using KnowledgeAPI.A.Answers.Model;
 using KnowledgeAPI.Common;
 using KnowledgeAPI.Q.Categories;
 using KnowledgeAPI.Q.Categories.Model;
 using KnowledgeAPI.Q.Questions.Model;
+using Microsoft.Azure.Cosmos;
 using Newtonsoft.Json;
-using System.Collections.ObjectModel;
 using System.Net;
 
 
@@ -28,7 +23,7 @@ namespace KnowledgeAPI.Q.Questions
         private string _workspace = null;
 
 
-     
+
         readonly string _rowColumns = @"'', '', c.TopId, c.id, c.ParentId, 
                             c.Title, c.Vectors, c.NumOfAssignedAnswers
                             FROM c ";
@@ -93,12 +88,14 @@ namespace KnowledgeAPI.Q.Questions
             // this._openAIEmbeddingService = Db.openAIEmbeddingService;
             _workspace = workspace;
         }
-                 
-        public async Task<HttpStatusCode> CheckDuplicate(string ws, string? Title, string? Id = null)
+
+        public async Task<HttpStatusCode> CheckDuplicate(string ws, string parentId, string? Title, string? Id = null)
         {
-            var sqlQuery = Title != null
-                ? $"SELECT c.id FROM c WHERE c.Workspace = '{ws}' AND c.Type = 'question' AND c.Title = '{Title.Trim().Replace("\'", "\\'")}' "
-                : $"SELECT c.id FROM c WHERE c.Workspace = '{ws}' AND c.Type = 'question' AND c.Id = '{Id}' ";
+            var sqlQuery = $"SELECT c.id FROM c WHERE c.Workspace = '{ws}' AND c.Type = 'question' AND c.ParentId = '{parentId}' AND ";
+            sqlQuery += Title != null
+              ? $"c.Title = '{Title.Trim().Replace("\'", "\\'")}' "
+              : $"c.Type = 'question' AND c.Id = '{Id}' ";
+
             QueryDefinition queryDefinition = new(sqlQuery);
             FeedIterator<string> queryResultSetIterator =
                 _container!.GetItemQueryIterator<string>(queryDefinition);
@@ -123,7 +120,7 @@ namespace KnowledgeAPI.Q.Questions
                 var question = new Question(questionData);
                 //Console.WriteLine("----->>>>> " + JsonConvert.SerializeObject(question));
                 // Read the item to see if it exists.  
-                await CheckDuplicate(questionData.Workspace, questionData.Title);
+                await CheckDuplicate(questionData.Workspace, questionData.ParentId, questionData.Title);
                 msg = $":::::: Item in database with Title: {questionData.Title} already exists";
                 Console.WriteLine(msg);
             }
@@ -174,7 +171,7 @@ namespace KnowledgeAPI.Q.Questions
                 try
                 {
                     // Check if the title already exists
-                    HttpStatusCode statusCode = await CheckDuplicate(workspace, title);
+                    HttpStatusCode statusCode = await CheckDuplicate(workspace, parentId, title);
                     msg = $"Question in database with Title: {title} already exists";
                     Console.WriteLine(msg);
                 }
@@ -300,7 +297,7 @@ namespace KnowledgeAPI.Q.Questions
                     await myContainer.ReadItemAsync<Question>(
                         id,
                         new PartitionKey(partitionKey!)
-                    );  
+                    );
                 Question question = aResponse.Resource;
 
                 var doUpdate = true;
@@ -308,7 +305,7 @@ namespace KnowledgeAPI.Q.Questions
                 {
                     try
                     {
-                        HttpStatusCode statusCode = await CheckDuplicate(workspace, title);
+                        HttpStatusCode statusCode = await CheckDuplicate(workspace, newParentId, title);
                         doUpdate = false;
                         var msg = $"Question with Title: \"{title}\" already exists in database.";
                         Console.WriteLine(msg);
@@ -328,7 +325,8 @@ namespace KnowledgeAPI.Q.Questions
                     question.ParentId = newParentId;
                     // question.PartitionKey = newParentId!;
 
-                    if (modified != null) {
+                    if (modified != null)
+                    {
                         question.Modified = new WhoWhen(modified.NickName);
                     }
 
@@ -376,7 +374,7 @@ namespace KnowledgeAPI.Q.Questions
             catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
             {
                 var msg = $"Question Id: \"{questionDto.Id}\" Not Found in database.";
-                Console.WriteLine(msg); 
+                Console.WriteLine(msg);
                 return new QuestionEx(msg);
             }
             catch (Exception ex)
@@ -467,7 +465,7 @@ namespace KnowledgeAPI.Q.Questions
             try
             {
                 // Read the item to see if it exists.  
-                ItemResponse<Question> aResponse = 
+                ItemResponse<Question> aResponse =
                     await myContainer.ReadItemAsync<Question>(
                         id,
                         new PartitionKey(partitionKey)
@@ -507,7 +505,7 @@ namespace KnowledgeAPI.Q.Questions
             catch (Exception ex)
             {
                 // Note that after creating the item, we can access the body of the item with the Resource property off the ItemResponse. We can also access the RequestCharge property to see the amount of RUs consumed on this request.
-                message = ex.Message;   
+                message = ex.Message;
                 Console.WriteLine(ex.Message);
             }
             return message;
@@ -574,12 +572,14 @@ namespace KnowledgeAPI.Q.Questions
             {
                 // Create a SearchClient to load and query documents
                 // Create a SearchIndexClient to send create/delete index commands
+                /*
                 string serviceName = section["endpoint"]!;
                 string apiKey = section.GetSection("credential").GetSection("key").Value ?? string.Empty;
                 string indexName = section["indexname"]!;
                 Uri serviceEndpoint = new Uri($"https://{serviceName}.search.windows.net/");
                 AzureKeyCredential credential = new AzureKeyCredential(apiKey);
                 SearchIndexClient adminClient = new SearchIndexClient(serviceEndpoint, credential);
+                */
 
                 /*
                 SearchClient srchclient = new SearchClient(serviceEndpoint, indexName, credential);
@@ -686,7 +686,7 @@ namespace KnowledgeAPI.Q.Questions
                 else
                 {
                     sqlQuery += "(";
-                    for (var i=0; i < words.Count; i++)
+                    for (var i = 0; i < words.Count; i++)
                     {
                         if (i > 0)
                             sqlQuery += " OR ";
@@ -695,10 +695,10 @@ namespace KnowledgeAPI.Q.Questions
                     sqlQuery += ")";
                 }
                 sqlQuery += $" ORDER BY c.Title OFFSET 0 LIMIT {count}";
-                Console.WriteLine(sqlQuery);   
+                Console.WriteLine(sqlQuery);
 
-                QueryDefinition queryDefinition = new QueryDefinition(sqlQuery);    
-                using (FeedIterator<QuestionRow> queryResultSetIterator = 
+                QueryDefinition queryDefinition = new QueryDefinition(sqlQuery);
+                using (FeedIterator<QuestionRow> queryResultSetIterator =
                     myContainer!.GetItemQueryIterator<QuestionRow>(queryDefinition))
                 {
                     while (queryResultSetIterator.HasMoreResults)
@@ -787,10 +787,10 @@ return recipes;
         }
 
 
-        public async Task<Question> SetAnswerTitles(Question question, 
+        public async Task<Question> SetAnswerTitles(Question question,
             CategoryService categoryService, AnswerService answerService)
         {
-            var (workspace, topId, partitionKey, id, title, parentId, type, source, status, 
+            var (workspace, topId, partitionKey, id, title, parentId, type, source, status,
                     assignedAnswers, relatedFilters) = question;
             var categoryKey = new CategoryKey(question);
             // get category Title
@@ -814,7 +814,7 @@ return recipes;
                 Dictionary<string, AnswerTitleLink> dict2 = await answerService.GetTitlesAndLinks(dict);
                 foreach (var assignedAnswer in assignedAnswers)
                 {
-                   AnswerTitleLink? titleLink;
+                    AnswerTitleLink? titleLink;
                     if (dict2.TryGetValue(assignedAnswer.Id, out titleLink))
                     {
                         assignedAnswer.AnswerTitle = titleLink.Title;

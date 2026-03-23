@@ -1,8 +1,7 @@
-﻿using Microsoft.Azure.Cosmos.Linq;
+﻿using Azure.Search.Documents.Indexes;
 using KnowledgeAPI.A.Answers.Model;
 using KnowledgeAPI.Common;
 using Newtonsoft.Json;
-using Azure.Search.Documents.Indexes;
 
 namespace KnowledgeAPI.Q.Questions.Model
 {
@@ -42,7 +41,7 @@ namespace KnowledgeAPI.Q.Questions.Model
         public string Id { get; set; }
         public string? ParentId { get; set; }
 
-        //[SearchableField(IsFilterable = true, IsSortable = true, IsFacetable = true)]
+        [SearchableField(IsFilterable = true, IsSortable = true, IsFacetable = true)]
         public string Title { get; set; }
 
         //[VectorSearchField()]
@@ -53,7 +52,7 @@ namespace KnowledgeAPI.Q.Questions.Model
         public int? NumOfAssignedAnswers { get; set; }
 
         [JsonProperty(PropertyName = "Included", NullValueHandling = NullValueHandling.Ignore)]
-        public bool? Included {  get; set; }
+        public bool? Included { get; set; }
 
         public QuestionRow()
             : base(new WhoWhen("Admin"), null)
@@ -83,7 +82,8 @@ namespace KnowledgeAPI.Q.Questions.Model
             TopId = dto.TopId;
             //string s = DateTime.Now.Ticks.ToString();
             //Id = s.Substring(s.Length - 10);// Guid.NewGuid().ToString();
-            if (dto.Id.Equals("generateId")) {
+            if (dto.Id.Equals("generateId"))
+            {
                 string s = DateTime.Now.Ticks.ToString();
                 dto.Id = s.Substring(s.Length - 10);// Guid.NewGuid().ToString();
             }
@@ -134,7 +134,7 @@ namespace KnowledgeAPI.Q.Questions.Model
         public int Status { get; set; }
 
         public Question()
-            : base()   
+            : base()
         {
             Type = "question";
             CategoryTitle = null;
@@ -185,7 +185,7 @@ namespace KnowledgeAPI.Q.Questions.Model
             //AssignedAnswers = questionDto.AssignedAnswers!;
             //NumOfAssignedAnswers = questionDto.NumOfAssignedAnswers;
             Source = questionDto.Source;
-            Status = questionDto.Status;    
+            Status = questionDto.Status;
         }
 
         public Question(QuestionRow questionRow)
@@ -201,7 +201,7 @@ namespace KnowledgeAPI.Q.Questions.Model
         //    $"{PartitionKey}/{Id}, {Title} {ParentId} ";
 
         public void Deconstruct(out string workspace, out string topId, out string partitionKey, out string id, out string title, out string? parentId,
-                                out string type, out int source, out int status, 
+                                out string type, out int source, out int status,
                                 out List<AssignedAnswer>? assignedAnswers, // out int? numOfAssignedAnswers) //,
                                 out List<RelatedFilter>? relatedFilters) //, out int? numOfRelatedFilters)
         {

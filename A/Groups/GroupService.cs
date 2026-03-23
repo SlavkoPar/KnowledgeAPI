@@ -457,6 +457,7 @@ namespace KnowledgeAPI.A.Groups
             return new GroupEx(null, msg);
         }
 
+
         public async Task<Group> UpdateNumOfAnswers(GroupKey groupKey, WhoWhen modified, int num)
         {
             var (workspace, topId, partitionKey, id, _) = groupKey;

@@ -32,8 +32,8 @@ namespace KnowledgeAPI.A.Answers
             try
             {
                 var answerService = new AnswerService(dbService, workspace);
-                int count = await answerService.GetAnswerCount(workspace);
-                return Ok(count);
+                AnswerRowDtosEx answerRowDtosEx = await answerService.GetAnswerCount(workspace);
+                return Ok(answerRowDtosEx);
             }
             catch (Exception ex)
             {

@@ -1,6 +1,4 @@
-﻿using Azure;
-using Azure.Search.Documents.Indexes;
-using Knowledge.Services;
+﻿using Knowledge.Services;
 using KnowledgeAPI.A.Answers.Model;
 using KnowledgeAPI.A.Groups;
 using KnowledgeAPI.A.Groups.Model;
@@ -89,11 +87,15 @@ namespace KnowledgeAPI.A.Answers
             _workspace = workspace;
         }
 
-        public async Task<HttpStatusCode> CheckDuplicate(string ws, string? Title, string? Id = null)
+        public async Task<HttpStatusCode> CheckDuplicate(string ws, string parentId, string? Title, string? Id = null)
         {
-            var sqlQuery = Title != null
-                ? $"SELECT c.id FROM c WHERE c.Workspace = '{ws}' AND c.Type = 'answer' AND c.Title = '{Title.Trim().Replace("\'", "\\'")}' "
-                : $"SELECT c.id FROM c WHERE c.Workspace = '{ws}' AND c.Type = 'answer' AND c.Id = '{Id}' ";
+            var sqlQuery = $"SELECT c.id FROM c WHERE c.Workspace = '{ws}' AND c.Type = 'answer' AND c.ParentId = '{parentId}' AND ";
+            sqlQuery += Title != null
+              ? $"c.Title = '{Title.Trim().Replace("\'", "\\'")}' "
+              : $"c.Type = 'question' AND c.Id = '{Id}' ";
+            //var sqlQuery = Title != null
+            //    ? $"SELECT c.id FROM c WHERE c.Workspace = '{ws}' AND c.Type = 'answer' AND c.Title = '{Title.Trim().Replace("\'", "\\'")}' "
+            //    : $"SELECT c.id FROM c WHERE c.Workspace = '{ws}' AND c.Type = 'answer' AND c.Id = '{Id}' ";
             QueryDefinition queryDefinition = new(sqlQuery);
             FeedIterator<string> queryResultSetIterator =
                 _container!.GetItemQueryIterator<string>(queryDefinition);
@@ -118,7 +120,7 @@ namespace KnowledgeAPI.A.Answers
                 var answer = new Answer(answerData);
                 //Console.WriteLine("----->>>>> " + JsonConvert.SerializeObject(answer));
                 // Read the item to see if it exists.  
-                await CheckDuplicate(answerData.Workspace, answerData.Title);
+                await CheckDuplicate(answerData.Workspace, answerData.ParentId, answerData.Title);
                 msg = $":::::: Item in database with Title: {answerData.Title} already exists";
                 Console.WriteLine(msg);
             }
@@ -169,7 +171,7 @@ namespace KnowledgeAPI.A.Answers
                 try
                 {
                     // Check if the title already exists
-                    HttpStatusCode statusCode = await CheckDuplicate(workspace, title);
+                    HttpStatusCode statusCode = await CheckDuplicate(workspace, parentId, title);
                     msg = $"Answer in database with Title: {title} already exists";
                     Console.WriteLine(msg);
                 }
@@ -202,7 +204,34 @@ namespace KnowledgeAPI.A.Answers
             return new AnswerEx(null, msg);
         }
 
-        public async Task<int> GetAnswerCount(string workspace)
+        public async Task<AnswerRowDtosEx> GetAll(Container myContainer, string workspace)
+        {
+            string msg = string.Empty;
+            try
+            {
+                var sqlQuery = $"SELECT {_rowColumns} WHERE c.Workspace = '{workspace}' AND c.Type = 'answer'";
+                QueryDefinition queryDefinition = new QueryDefinition(sqlQuery);
+                using (FeedIterator<AnswerRow> queryResultSetIterator =
+                    myContainer!.GetItemQueryIterator<AnswerRow>(queryDefinition))
+                {
+                    while (queryResultSetIterator.HasMoreResults)
+                    {
+                        FeedResponse<AnswerRow> currentResultSet = await queryResultSetIterator.ReadNextAsync();
+                        return new AnswerRowDtosEx(currentResultSet.ToList(), string.Empty);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Note that after creating the item, we can access the body of the item with the Resource property off the ItemResponse. We can also access the RequestCharge property to see the amount of RUs consumed on this request.
+                Console.WriteLine(ex.Message);
+                msg = ex.Message;
+            }
+            return new AnswerRowDtosEx(new List<AnswerRowDto>(), string.Empty);
+        }
+
+
+        public async Task<AnswerRowDtosEx> GetAnswerCount(string workspace)
         {
             var sql = $"SELECT value count(1) FROM c WHERE c.Type = 'answer' AND c.Workspace='{workspace}'";
             var myContainer = await container();
@@ -213,7 +242,16 @@ namespace KnowledgeAPI.A.Answers
                 FeedResponse<int> response = await query.ReadNextAsync();
                 count += response.Resource.FirstOrDefault();
             }
-            return count;
+
+            if (count == 0)
+            {
+                return new AnswerRowDtosEx(new List<AnswerRowDto>(), "Workspace has no Answers");
+            }
+            else if (count < 15)
+            {
+                return GetAll(myContainer, workspace).GetAwaiter().GetResult();
+            }
+            return new AnswerRowDtosEx(new List<AnswerRowDto>(), "Workspace has no Answers");
         }
 
         public async Task<int> CountNumOfAnswers(GroupKey groupKey)
@@ -318,7 +356,7 @@ namespace KnowledgeAPI.A.Answers
                 {
                     try
                     {
-                        HttpStatusCode statusCode = await CheckDuplicate(workspace, title);
+                        HttpStatusCode statusCode = await CheckDuplicate(workspace, newParentId, title);
                         doUpdate = false;
                         var msg = $"Answer with Title: \"{title}\" already exists in database.";
                         Console.WriteLine(msg);
@@ -548,12 +586,14 @@ namespace KnowledgeAPI.A.Answers
             {
                 // Create a SearchClient to load and query documents
                 // Create a SearchIndexClient to send create/delete index commands
+                /*
                 string serviceName = section["endpoint"]!;
                 string apiKey = section.GetSection("credential").GetSection("key").Value ?? string.Empty;
                 string indexName = section["indexname"]!;
                 Uri serviceEndpoint = new Uri($"https://{serviceName}.search.windows.net/");
                 AzureKeyCredential credential = new AzureKeyCredential(apiKey);
                 SearchIndexClient adminClient = new SearchIndexClient(serviceEndpoint, credential);
+                */
 
                 /*
                 SearchClient srchclient = new SearchClient(serviceEndpoint, indexName, credential);
